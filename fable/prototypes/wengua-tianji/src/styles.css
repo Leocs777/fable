@@ -760,6 +760,11 @@ textarea:focus {
   font-weight: 700;
 }
 
+.fengshui-checklist.loading span {
+  color: var(--muted);
+  animation: interpretPulse 1.3s ease-in-out infinite;
+}
+
 .fengshui-form {
   gap: 11px;
 }

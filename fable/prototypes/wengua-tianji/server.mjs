@@ -331,6 +331,70 @@ function handleDaily(request, response) {
   sendJson(response, 200, { date, hexagram: name, line, meaning });
 }
 
+// ---- 风水 Lite 解读 ----
+const FENGSHUI_SCHEMA = {
+  type: "object",
+  properties: {
+    suggestions: {
+      type: "array",
+      items: { type: "string" },
+      description: "恰好 6 条可执行的居家调整建议",
+    },
+    note: { type: "string", description: "一句话提示（如朝向误差或安全）" },
+  },
+  required: ["suggestions", "note"],
+  additionalProperties: false,
+};
+
+const FENGSHUI_SYSTEM = `你是 Fable 风水 Lite 解读引擎。根据用户手工输入的房间类型、朝向和家具位置，给出可执行的低成本居家调整建议。
+
+铁律：
+1. 只做阳宅居家摆设建议（床/桌/门窗/动线/采光/收纳），落到能马上动手做的小调整。
+2. 不把吉凶绝对化、不制造焦虑，不说"必出事""破财""影响健康"这类断言。
+3. suggestions 恰好 6 条，每条具体可执行（如"床头靠实墙，床尾不正对房门"），不空泛。
+4. 朝向是手工输入、可能有误差，note 里温和提示这一点。
+5. 风水是文化与居住舒适参考，不替代专业设计或安全意见。`;
+
+function buildFengshuiMessage(payload) {
+  const { roomType, direction, layout } = payload;
+  const layoutText = Array.isArray(layout) && layout.length ? layout.join("、") : "（未标注具体位置）";
+  return [
+    "用户手工输入的房间：",
+    `- 房间类型：${roomType || "未知"}`,
+    `- 主要朝向：${direction || "未知"}`,
+    `- 家具/门窗位置：${layoutText}`,
+    "",
+    "请给出恰好 6 条可执行的居家调整建议。",
+  ].join("\n");
+}
+
+async function handleFengshui(request, response) {
+  let payload;
+  try {
+    payload = await readBody(request);
+  } catch {
+    sendJson(response, 400, { error: "bad_request" });
+    return;
+  }
+  const config = await resolveConfig();
+  if (!config) {
+    sendJson(response, 503, { error: "no_api_key" });
+    return;
+  }
+  try {
+    const result = await callLLM(config, {
+      system: FENGSHUI_SYSTEM,
+      user: buildFengshuiMessage(payload),
+      schema: FENGSHUI_SCHEMA,
+      schemaName: "fengshui_reading",
+    });
+    sendJson(response, 200, result);
+  } catch (err) {
+    console.error(`fengshui failed (${config.provider}):`, err.status || "", err.message, err.detail || "");
+    sendJson(response, 502, { error: "model_failed" });
+  }
+}
+
 const server = createServer(async (request, response) => {
   const rawPath = decodeURIComponent(request.url.split("?")[0]);
 
@@ -341,6 +405,11 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && rawPath === "/api/bazi") {
     await handleBazi(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && rawPath === "/api/fengshui") {
+    await handleFengshui(request, response);
     return;
   }
 

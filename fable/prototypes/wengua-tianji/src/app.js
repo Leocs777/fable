@@ -79,6 +79,7 @@ const fengshuiSubcopy = document.querySelector("#fengshuiSubcopy");
 const fengshuiResult = document.querySelector("#fengshuiResult");
 const roomCompass = document.querySelector("#roomCompass");
 const fengshuiChecklist = document.querySelector("#fengshuiChecklist");
+const fengshuiBanner = document.querySelector("#fengshuiBanner");
 const layoutChoices = Array.from(document.querySelectorAll("[data-layout-choice]"));
 const chips = Array.from(document.querySelectorAll("[data-chip]"));
 const builderLines = document.querySelector("#builderLines");
@@ -583,14 +584,12 @@ async function fetchDaily() {
   }
 }
 
-function showFengshuiResult() {
-  const type = roomType.value;
-  const direction = roomDirection.value;
+function fengshuiFallback(type, direction) {
   const roomSpecific = {
     "卧室": "床头保持靠实墙，床边至少留出一侧顺畅通道，先稳睡眠区。",
     "书房": "书桌避免背门而坐，优先让座位后方有墙或高柜形成支撑。",
     "客厅": "沙发宜靠实墙，主通道保持开阔，避免一进门直接被杂物阻断。",
-    "厨房": "水火区域保持清楚分区，台面减少堆叠，优先处理潮湿和油烟。"
+    "厨房": "水火区域保持清楚分区，台面减少堆叠，优先处理潮湿和油烟。",
   };
   const directionSpecific = {
     "东": "朝东空间适合保持清晨采光，入口处不要堆放高物。",
@@ -600,23 +599,64 @@ function showFengshuiResult() {
     "西": "西晒位置注意隔热，傍晚强光处不宜放长时间办公位。",
     "西北": "西北角保持整洁有序，适合放稳定收纳，不宜堆临时物。",
     "北": "北向偏冷，建议补暖光和柔软材质，提升舒适度。",
-    "东北": "东北角适合保持安静和低杂物，避免变成杂物集中区。"
+    "东北": "东北角适合保持安静和低杂物，避免变成杂物集中区。",
   };
-  const suggestions = [
-    roomSpecific[type],
-    directionSpecific[direction],
+  return [
+    roomSpecific[type] || "核心家具靠实墙，留出顺畅主通道。",
+    directionSpecific[direction] || "结合朝向调整采光与收纳。",
     "门口到核心家具之间留出连续动线，减少进出时的阻滞感。",
     "窗边先保留采光和通风，不用高柜或杂物压住主光源。",
     "暗角用一盏暖色辅助光处理，比增加装饰物更有效。",
-    "床、桌、沙发等高频位置旁边保留一个可随手收纳的低矮容器。"
+    "床、桌、沙发等高频位置旁边保留一个可随手收纳的低矮容器。",
   ];
-  roomCompass.textContent = `朝向：${direction} · ${type}`;
+}
+
+let fengshuiReqId = 0;
+
+function renderFengshuiList(suggestions) {
   fengshuiChecklist.innerHTML = suggestions
     .map((suggestion, index) => `<div><strong>${index + 1}</strong><span>${suggestion}</span></div>`)
     .join("");
+}
+
+async function requestFengshui(type, direction) {
+  const reqId = (fengshuiReqId += 1);
+  fengshuiChecklist.classList.add("loading");
+  renderFengshuiList(["正在生成建议…", "正在生成建议…", "正在生成建议…"]);
+  const layout = layoutChoices.filter((c) => c.classList.contains("active")).map((c) => c.textContent.trim());
+  const finish = (suggestions, note, fromAI) => {
+    fengshuiChecklist.classList.remove("loading");
+    renderFengshuiList(suggestions);
+    fengshuiBanner.textContent = `${fromAI ? "AI 解读 · " : "示例解读（未配置 AI）· "}${note || "适合先做低成本调整。"}`;
+  };
+  try {
+    const res = await fetch("/api/fengshui", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ roomType: type, direction, layout }),
+    });
+    if (reqId !== fengshuiReqId) return;
+    const data = await res.json().catch(() => ({}));
+    if (reqId !== fengshuiReqId) return;
+    if (res.ok && Array.isArray(data.suggestions) && data.suggestions.length) {
+      finish(data.suggestions, data.note, true);
+    } else {
+      finish(fengshuiFallback(type, direction), "", false);
+    }
+  } catch {
+    if (reqId !== fengshuiReqId) return;
+    finish(fengshuiFallback(type, direction), "", false);
+  }
+}
+
+function showFengshuiResult() {
+  const type = roomType.value;
+  const direction = roomDirection.value;
+  roomCompass.textContent = `朝向：${direction} · ${type}`;
   fengshuiResult.classList.add("show");
   fengshuiResult.setAttribute("aria-hidden", "false");
   fengshuiSubcopy.textContent = `已生成 ${type} 建议`;
+  requestFengshui(type, direction);
 }
 
 function updateCount() {
