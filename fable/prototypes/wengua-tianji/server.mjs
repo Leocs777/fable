@@ -14,7 +14,7 @@ const host = process.env.HOST || "0.0.0.0";
 //  - anthropic：Claude（claude-opus-4-8）
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions";
-const DEFAULT_MODELS = { anthropic: "claude-opus-4-8", cerebras: "qwen-3-32b" };
+const DEFAULT_MODELS = { anthropic: "claude-opus-4-8", cerebras: "gpt-oss-120b" };
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -68,9 +68,9 @@ const SYSTEM_PROMPT = `你是 Fable App 的「问卦解释引擎」。卦象由�
 1. 解读必须紧扣用户的具体问题。用户问时机就谈时机，问感情就谈感情，不要给放之四海皆准的空话。
 2. 只依据「卦义依据」提供的卦义来解释，可结合动爻表达「正在转变」，但不要发明卦义。
 3. 输出白话，不堆术语；面向看不懂术数的普通用户。
-4. 每条行动建议必须具体、今天就能做，不要"顺其自然"这类废话。
+4. 每条行动建议必须具体、今天就能做；用「动词短语：具体做法」的格式（例如「先算成本：列出两地租房与薪资差距」），不要用方括号标签，不要"顺其自然"这类废话。
 5. 不做确定性承诺，不说"一定""保证""注定"。
-6. 安全：若问题涉及医疗诊断/用药、法律诉讼、重大财务赌注，safety_block=true，title 与 actions 改为温和提示"这类决定建议咨询专业人士"，confidence=low，不给确定性断言。
+6. 安全：仅当问题涉及医疗诊断/用药、法律诉讼、或把大额积蓄投入赌博/高杠杆投机时，safety_block=true，title 与 actions 改为温和提示"这类决定建议咨询专业人士"，confidence=low，不给确定性断言。换工作、创业、搬家、感情、考试、人际等正常人生决策不属于高风险，正常解读、不要拦截。
 7. confidence：有动爻、卦义与问题契合时可 medium；问题模糊或高风险时 low；不要轻易 high。`;
 
 function buildUserMessage(payload) {
@@ -126,9 +126,11 @@ async function callAnthropic(config, payload) {
 }
 
 async function callCerebras(config, payload) {
+  // 部分 Cerebras 模型（如 zai-glm-4.7）是推理模型，推理会先吃掉 token 预算，
+  // 上限给小了会导致最终 JSON 被截断、content 为空，所以预算放宽。
   const body = {
     model: config.model,
-    max_completion_tokens: 2000,
+    max_completion_tokens: 8000,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: buildUserMessage(payload) },
@@ -148,8 +150,11 @@ async function callCerebras(config, payload) {
   });
   if (!res.ok) throw await httpError(res, "cerebras");
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("no content in response");
+  const choice = data.choices?.[0];
+  const content = choice?.message?.content;
+  if (!content) {
+    throw new Error(`no content (finish_reason: ${choice?.finish_reason || "unknown"})`);
+  }
   return JSON.parse(content);
 }
 

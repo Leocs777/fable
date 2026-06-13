@@ -3,5 +3,5 @@
   "_provider": "provider 可填 cerebras 或 anthropic；不填则按 key 字段名推断。model 不填则用该 provider 的默认（cerebras: qwen-3-32b，anthropic: claude-opus-4-8）。",
   "provider": "cerebras",
   "apiKey": "csk-...",
-  "model": "qwen-3-32b"
+  "model": "gpt-oss-120b"
 }
