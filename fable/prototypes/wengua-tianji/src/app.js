@@ -15,6 +15,8 @@ const changedName = document.querySelector("#changedName");
 const changedBlock = document.querySelector("#changedBlock");
 const hexaArrow = document.querySelector("#hexaArrow");
 const movingNote = document.querySelector("#movingNote");
+const riskNotice = document.querySelector("#riskNotice");
+const resultSource = document.querySelector("#resultSource");
 const resultTitle = document.querySelector(".result-panel h2");
 const resultReading = document.querySelector(".result-panel .reading");
 const resultActions = Array.from(document.querySelectorAll(".result-panel .actions div span"));
@@ -242,8 +244,10 @@ function renderGlyph(container, lines, movingPositions, markMoving) {
     .join("");
 }
 
+let interpretRequestId = 0;
+
 function renderResult(cast) {
-  const reading = pickReading(cast);
+  // 同步部分：卦象结构与问题回显，规则引擎结果立即可见
   resultQuestion.textContent = questionInput.value.trim() || "（未填写问题）";
   renderGlyph(primaryGlyph, cast.primaryLines, cast.movingPositions, true);
   primaryName.textContent = cast.primaryName;
@@ -257,13 +261,87 @@ function renderResult(cast) {
   } else {
     movingNote.textContent = "无动爻：卦象安定，本卦即为最终参考。";
   }
-  resultTitle.textContent = reading.title;
-  resultReading.textContent = reading.reading;
-  resultActions.forEach((action, index) => {
-    action.textContent = reading.actions[index];
-  });
   if (deepHexName) {
     deepHexName.textContent = hasMoving ? `${cast.primaryName}卦变${cast.changedName}卦` : `${cast.primaryName}卦（无动爻）`;
+  }
+  // 异步部分：把卦象+卦义+问题交给后端 AI 生成贴合问题的白话解读
+  requestInterpretation(cast, hasMoving);
+}
+
+function setInterpretLoading() {
+  resultPanel.dataset.interpret = "loading";
+  resultPanel.classList.remove("safety");
+  resultTitle.textContent = "正在结合卦象生成解读…";
+  resultReading.textContent = "规则引擎已起卦，正在针对你的问题生成白话解读。";
+  resultActions.forEach((action) => {
+    action.textContent = "·";
+  });
+  riskNotice.hidden = true;
+  resultSource.textContent = "";
+}
+
+function applyInterpretation(data, fromAI) {
+  resultPanel.dataset.interpret = "done";
+  resultPanel.classList.toggle("safety", Boolean(data.safety_block));
+  resultTitle.textContent = data.title || "";
+  resultReading.textContent = data.interpretation || "";
+  const actions = data.actions || [];
+  resultActions.forEach((action, index) => {
+    action.textContent = actions[index] || "";
+  });
+  if (data.risk_notice) {
+    riskNotice.textContent = data.risk_notice;
+    riskNotice.hidden = false;
+  } else {
+    riskNotice.hidden = true;
+  }
+  if (data.safety_block) {
+    resultSource.textContent = "安全提示 · ";
+  } else if (fromAI) {
+    resultSource.textContent = "AI 解读 · ";
+  } else {
+    resultSource.textContent = "示例解读（未配置 AI）· ";
+  }
+}
+
+function localFallback(cast) {
+  const reading = pickReading(cast);
+  return {
+    title: reading.title,
+    interpretation: reading.reading,
+    actions: reading.actions,
+    risk_notice: "",
+    confidence: "low",
+    safety_block: false,
+  };
+}
+
+async function requestInterpretation(cast, hasMoving) {
+  const reqId = ++interpretRequestId;
+  setInterpretLoading();
+  try {
+    const res = await fetch("/api/interpret", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        question: questionInput.value.trim(),
+        primaryName: cast.primaryName,
+        changedName: cast.changedName,
+        movingLabels: cast.movingLabels,
+        hasMoving,
+      }),
+    });
+    if (reqId !== interpretRequestId) return; // 已被新一次起卦取代
+    const data = await res.json().catch(() => ({}));
+    if (reqId !== interpretRequestId) return;
+    if (res.ok && data.title) {
+      applyInterpretation(data, true);
+    } else {
+      applyInterpretation(localFallback(cast), false);
+    }
+  } catch {
+    if (reqId !== interpretRequestId) return;
+    applyInterpretation(localFallback(cast), false);
   }
 }
 
@@ -506,6 +584,11 @@ fengshuiButton.addEventListener("click", showFengshuiResult);
 
 resetButton.addEventListener("click", () => {
   shell.dataset.state = "idle";
+  interpretRequestId += 1; // 取消任何进行中的解读请求
+  resultPanel.classList.remove("safety");
+  delete resultPanel.dataset.interpret;
+  riskNotice.hidden = true;
+  resultSource.textContent = "";
   coins.forEach((coin) => coin.classList.remove("tossing", "tails"));
   trayHint.textContent = "轻点天机盘，或点击下方按钮开始起卦";
   buttonSubcopy.textContent = "免费先看核心结论";

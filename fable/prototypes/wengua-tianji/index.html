@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>天机快问</title>
-    <link rel="stylesheet" href="./src/styles.css?v=16" />
+    <link rel="stylesheet" href="./src/styles.css?v=17" />
   </head>
   <body>
     <main class="prototype-shell" data-state="idle" data-module="wengua">
@@ -211,7 +211,8 @@
             <div><strong>2</strong><span>主动蓄力：补齐关键能力，为下一步行动做准备。</span></div>
             <div><strong>3</strong><span>择机推进：等待条件成熟，再果断出手。</span></div>
           </div>
-          <p class="result-disclaimer">卦象由确定性规则生成；解释文案为原型示例。结果为文化参考，不替代医疗、法律、财务等专业意见。</p>
+          <p class="risk-notice" id="riskNotice" hidden></p>
+          <p class="result-disclaimer"><span id="resultSource"></span>卦象由确定性规则生成。结果为文化参考，不替代医疗、法律、财务等专业意见。</p>
           <button class="unlock" id="unlockButton" type="button">查看深度报告</button>
           <button class="secondary-action" id="resetButton" type="button">再问一次</button>
         </section>
@@ -340,6 +341,6 @@
         </aside>
       </section>
     </main>
-    <script src="./src/app.js?v=16"></script>
+    <script src="./src/app.js?v=17"></script>
   </body>
 </html>

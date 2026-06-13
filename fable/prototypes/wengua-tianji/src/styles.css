@@ -910,6 +910,17 @@ textarea:focus {
   text-align: center;
 }
 
+.risk-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(165, 31, 26, 0.07);
+  color: var(--cinnabar-dark);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 .result-disclaimer {
   margin: 0;
   padding-top: 10px;
@@ -918,6 +929,39 @@ textarea:focus {
   font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
   font-size: 11.5px;
   line-height: 1.5;
+}
+
+#resultSource {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+/* AI 解读生成中：标题与正文柔和呼吸，行动建议显示占位点 */
+.result-panel[data-interpret="loading"] h2,
+.result-panel[data-interpret="loading"] .reading {
+  color: var(--muted);
+  animation: interpretPulse 1.3s ease-in-out infinite;
+}
+
+.result-panel[data-interpret="loading"] .actions strong {
+  background: rgba(47, 111, 100, 0.25);
+}
+
+.result-panel[data-interpret="loading"] .actions span {
+  color: transparent;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(73, 53, 29, 0.1), rgba(73, 53, 29, 0.05));
+  animation: interpretPulse 1.3s ease-in-out infinite;
+}
+
+.result-panel.safety h2,
+.result-panel.safety .moving-note {
+  color: var(--cinnabar-dark);
+}
+
+@keyframes interpretPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
 }
 
 .result-panel h2 {

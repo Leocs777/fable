@@ -1,0 +1,4 @@
+{
+  "_comment": "复制本文件为 config.local.json（已被 .gitignore 忽略），填入你的 Anthropic API key 后重启 server，即可启用真实 AI 解读。也可改用环境变量 ANTHROPIC_API_KEY。",
+  "apiKey": "sk-ant-..."
+}
