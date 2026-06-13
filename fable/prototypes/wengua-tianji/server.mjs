@@ -101,13 +101,14 @@ async function httpError(res, label) {
   return error;
 }
 
-async function callAnthropic(config, payload) {
+// req: { system, user, schema, schemaName }
+async function callAnthropic(config, req) {
   const body = {
     model: config.model,
     max_tokens: 2000,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildUserMessage(payload) }],
-    output_config: { format: { type: "json_schema", schema: INTERPRET_SCHEMA } },
+    system: req.system,
+    messages: [{ role: "user", content: req.user }],
+    output_config: { format: { type: "json_schema", schema: req.schema } },
   };
   const res = await fetch(ANTHROPIC_URL, {
     method: "POST",
@@ -125,19 +126,19 @@ async function callAnthropic(config, payload) {
   return JSON.parse(textBlock.text);
 }
 
-async function callCerebras(config, payload) {
+async function callCerebras(config, req) {
   // 部分 Cerebras 模型（如 zai-glm-4.7）是推理模型，推理会先吃掉 token 预算，
   // 上限给小了会导致最终 JSON 被截断、content 为空，所以预算放宽。
   const body = {
     model: config.model,
     max_completion_tokens: 8000,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserMessage(payload) },
+      { role: "system", content: req.system },
+      { role: "user", content: req.user },
     ],
     response_format: {
       type: "json_schema",
-      json_schema: { name: "wengua_interpretation", strict: true, schema: INTERPRET_SCHEMA },
+      json_schema: { name: req.schemaName, strict: true, schema: req.schema },
     },
   };
   const res = await fetch(CEREBRAS_URL, {
@@ -158,10 +159,10 @@ async function callCerebras(config, payload) {
   return JSON.parse(content);
 }
 
-function callLLM(config, payload) {
+function callLLM(config, req) {
   return config.provider === "cerebras"
-    ? callCerebras(config, payload)
-    : callAnthropic(config, payload);
+    ? callCerebras(config, req)
+    : callAnthropic(config, req);
 }
 
 function readBody(request) {
@@ -229,7 +230,12 @@ async function handleInterpret(request, response) {
   }
 
   try {
-    const result = await callLLM(config, payload);
+    const result = await callLLM(config, {
+      system: SYSTEM_PROMPT,
+      user: buildUserMessage(payload),
+      schema: INTERPRET_SCHEMA,
+      schemaName: "wengua_interpretation",
+    });
     sendJson(response, 200, result);
   } catch (err) {
     console.error(`interpret failed (${config.provider}):`, err.status || "", err.message, err.detail || "");
@@ -237,11 +243,109 @@ async function handleInterpret(request, response) {
   }
 }
 
+// ---- 八字解读 ----
+const BAZI_SCHEMA = {
+  type: "object",
+  properties: {
+    career: { type: "string", description: "事业主题解读，2-3 句白话" },
+    love: { type: "string", description: "感情主题解读，2-3 句白话" },
+    year: { type: "string", description: "本年度趋势解读，2-3 句白话" },
+    confidence_note: { type: "string", description: "置信度与限制提示，一句话" },
+  },
+  required: ["career", "love", "year", "confidence_note"],
+  additionalProperties: false,
+};
+
+const BAZI_SYSTEM = `你是 Fable App 的八字解读引擎。四柱与五行由规则引擎排定，你只把它翻译成普通人看得懂的事业/感情/年度趋势三段白话解读。
+
+铁律：
+1. 只依据提供的四柱、五行分布来解读，不编造命主不存在的信息。
+2. 白话、不堆术语；每段 2-3 句，落到现实生活，不空谈。
+3. 不算寿命、疾病、生死，不做确定性断言（不说"必定""注定"）。
+4. 时辰置信度为"中"或"低"时，明显弱化结论、多用"倾向""可能"，confidence_note 说明时柱不确定。
+5. 八字是文化参考，不替代职业、医疗、心理等专业意见。`;
+
+function buildBaziMessage(payload) {
+  const { pillars, elements, certainty } = payload;
+  const certaintyText =
+    { accurate: "准确时辰（置信度高）", approx: "大概时段（置信度中，时柱为估算）", unknown: "时辰未知（置信度低，时柱不可用）" }[certainty] ||
+    "未知";
+  const pillarText = pillars
+    ? `年柱 ${pillars.year}，月柱 ${pillars.month}，日柱 ${pillars.day}，时柱 ${pillars.hour}`
+    : "（缺）";
+  const elementText = elements ? elements.map((e) => `${e.name} ${e.level}`).join("，") : "（缺）";
+  return [
+    "规则引擎排定的命盘（原型示例命盘）：",
+    `- 四柱：${pillarText}`,
+    `- 五行分布：${elementText}`,
+    `- 时辰置信度：${certaintyText}`,
+    "",
+    "请据此生成事业、感情、年度趋势三段白话解读。",
+  ].join("\n");
+}
+
+async function handleBazi(request, response) {
+  let payload;
+  try {
+    payload = await readBody(request);
+  } catch {
+    sendJson(response, 400, { error: "bad_request" });
+    return;
+  }
+  const config = await resolveConfig();
+  if (!config) {
+    sendJson(response, 503, { error: "no_api_key" });
+    return;
+  }
+  try {
+    const result = await callLLM(config, {
+      system: BAZI_SYSTEM,
+      user: buildBaziMessage(payload),
+      schema: BAZI_SCHEMA,
+      schemaName: "bazi_reading",
+    });
+    sendJson(response, 200, result);
+  } catch (err) {
+    console.error(`bazi failed (${config.provider}):`, err.status || "", err.message, err.detail || "");
+    sendJson(response, 502, { error: "model_failed" });
+  }
+}
+
+// ---- 每日一卦（确定性按日期选卦，纯查表不调模型）----
+const HEX_NAMES_LIST = Object.keys(HEXAGRAM_MEANINGS);
+
+function dailyHexagram(dateStr) {
+  let hash = 0;
+  const s = dateStr || "";
+  for (let i = 0; i < s.length; i += 1) hash = (hash * 131 + s.charCodeAt(i)) % 1000003;
+  const name = HEX_NAMES_LIST[hash % HEX_NAMES_LIST.length];
+  return { name, meaning: HEXAGRAM_MEANINGS[name] };
+}
+
+function handleDaily(request, response) {
+  const url = new URL(request.url, "http://localhost");
+  const date = url.searchParams.get("date") || "";
+  const { name, meaning } = dailyHexagram(date);
+  const parts = meaning.split(/[；;]/); // 卦义格式「<状态>；<指引>」，取指引部分更通顺
+  const line = (parts.length > 1 ? parts[1] : parts[0]).trim();
+  sendJson(response, 200, { date, hexagram: name, line, meaning });
+}
+
 const server = createServer(async (request, response) => {
   const rawPath = decodeURIComponent(request.url.split("?")[0]);
 
   if (request.method === "POST" && rawPath === "/api/interpret") {
     await handleInterpret(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && rawPath === "/api/bazi") {
+    await handleBazi(request, response);
+    return;
+  }
+
+  if (request.method === "GET" && rawPath === "/api/daily") {
+    handleDaily(request, response);
     return;
   }
 

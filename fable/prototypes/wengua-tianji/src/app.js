@@ -62,6 +62,16 @@ const baziResult = document.querySelector("#baziResult");
 const confidenceBanner = document.querySelector("#confidenceBanner");
 const hourPillar = document.querySelector("#hourPillar strong");
 const certaintyButtons = Array.from(document.querySelectorAll("[data-time-certainty]"));
+const baziCareer = document.querySelector("#baziCareer");
+const baziLove = document.querySelector("#baziLove");
+const baziYear = document.querySelector("#baziYear");
+const baziThemeCards = document.querySelector("#baziThemeCards");
+const baziSource = document.querySelector("#baziSource");
+const dailyCard = document.querySelector("#dailyCard");
+const dailyEyebrow = document.querySelector("#dailyEyebrow");
+const dailyHex = document.querySelector("#dailyHex");
+const dailyLine = document.querySelector("#dailyLine");
+const dailyBell = document.querySelector("#dailyBell");
 const roomType = document.querySelector("#roomType");
 const roomDirection = document.querySelector("#roomDirection");
 const fengshuiButton = document.querySelector("#fengshuiButton");
@@ -477,9 +487,15 @@ function setTimeCertainty(certainty) {
   certaintyButtons.forEach((button) => button.classList.toggle("active", button.dataset.timeCertainty === certainty));
 }
 
-function showBaziResult() {
-  baziResult.classList.add("show");
-  baziResult.setAttribute("aria-hidden", "false");
+const baziFallback = {
+  career: "适合以稳定积累换长期机会，先建立可信成果，再争取更大的职责。",
+  love: "关系里需要把期待说清楚，避免用沉默测试对方。",
+  year: "今年宜整理资源、人脉和节奏，机会会在准备充分后变得更顺。",
+};
+
+let baziReqId = 0;
+
+function setBaziBanner() {
   if (selectedTimeCertainty === "unknown") {
     confidenceBanner.classList.add("low");
     confidenceBanner.textContent = "置信度低：未提供时辰，时柱暂不确定，主题解释只给低确定性参考。";
@@ -495,6 +511,75 @@ function showBaziResult() {
     confidenceBanner.textContent = "置信度高：已使用准确时辰生成基础命盘。";
     hourPillar.textContent = "戊辰";
     baziSubcopy.textContent = "已生成基础命盘";
+  }
+}
+
+function applyBazi(data, fromAI) {
+  baziThemeCards.classList.remove("loading");
+  baziCareer.textContent = data.career;
+  baziLove.textContent = data.love;
+  baziYear.textContent = data.year;
+  baziSource.textContent = fromAI ? "AI 解读 · " : "示例解读（未配置 AI）· ";
+}
+
+async function requestBaziReading() {
+  const reqId = (baziReqId += 1);
+  baziThemeCards.classList.add("loading");
+  baziCareer.textContent = "正在生成解读…";
+  baziLove.textContent = "正在生成解读…";
+  baziYear.textContent = "正在生成解读…";
+  baziSource.textContent = "";
+  const pillarEls = document.querySelectorAll(".pillar-grid strong");
+  const payload = {
+    pillars: {
+      year: pillarEls[0]?.textContent,
+      month: pillarEls[1]?.textContent,
+      day: pillarEls[2]?.textContent,
+      hour: hourPillar.textContent,
+    },
+    elements: Array.from(document.querySelectorAll(".element-row")).map((row) => ({
+      name: row.querySelector("span").textContent,
+      level: row.querySelector("strong").textContent,
+    })),
+    certainty: selectedTimeCertainty,
+  };
+  try {
+    const res = await fetch("/api/bazi", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (reqId !== baziReqId) return;
+    const data = await res.json().catch(() => ({}));
+    if (reqId !== baziReqId) return;
+    if (res.ok && data.career) applyBazi(data, true);
+    else applyBazi(baziFallback, false);
+  } catch {
+    if (reqId !== baziReqId) return;
+    applyBazi(baziFallback, false);
+  }
+}
+
+function showBaziResult() {
+  baziResult.classList.add("show");
+  baziResult.setAttribute("aria-hidden", "false");
+  setBaziBanner();
+  requestBaziReading();
+}
+
+async function fetchDaily() {
+  const today = new Date();
+  const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  dailyEyebrow.textContent = `${today.getMonth() + 1}月${today.getDate()}日 · 今日天机`;
+  try {
+    const res = await fetch(`/api/daily?date=${date}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    dailyHex.textContent = data.hexagram;
+    dailyLine.textContent = data.line;
+    dailyCard.hidden = false;
+  } catch {
+    // 取卦失败就保持隐藏，不打扰首屏
   }
 }
 
@@ -722,6 +807,20 @@ deleteHistory.addEventListener("click", () => {
 
 updateCount();
 renderBuilderSlots();
+
+// 每日一卦留存钩子
+const dailyBellKey = "tianjiDailyBell";
+function setBell(on) {
+  dailyBell.classList.toggle("on", on);
+  dailyBell.textContent = on ? "已开提醒" : "每日提醒";
+}
+dailyBell.addEventListener("click", () => {
+  const on = localStorage.getItem(dailyBellKey) !== "true";
+  localStorage.setItem(dailyBellKey, String(on));
+  setBell(on);
+});
+setBell(localStorage.getItem(dailyBellKey) === "true");
+fetchDaily();
 
 if (localStorage.getItem(privacyConsentKey) === "true") {
   privacyStatus.textContent = "已同意";

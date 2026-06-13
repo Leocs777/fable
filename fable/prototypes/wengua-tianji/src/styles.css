@@ -191,6 +191,73 @@ h1 {
   display: block;
 }
 
+.daily-card {
+  margin: 12px 0 2px;
+  padding: 13px 15px;
+  border: 1px solid rgba(183, 131, 47, 0.3);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 60%),
+    rgba(183, 131, 47, 0.07);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.daily-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.daily-eyebrow {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-bell {
+  min-height: 30px;
+  border: 1px solid rgba(183, 131, 47, 0.4);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.5);
+  color: #7c5522;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-bell.on {
+  background: var(--gold);
+  color: #fffaf0;
+  border-color: var(--gold);
+}
+
+.daily-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.daily-hex {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(165, 31, 26, 0.1);
+  color: var(--cinnabar-dark);
+  font-family: "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 26px;
+}
+
+.daily-line {
+  margin: 0;
+  color: #3b332b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .tray-stage {
   position: relative;
   z-index: 1;
@@ -673,6 +740,24 @@ textarea:focus {
   color: #3b332b;
   font-size: 14px;
   line-height: 1.55;
+}
+
+.theme-cards.loading p {
+  color: var(--muted);
+  animation: interpretPulse 1.3s ease-in-out infinite;
+}
+
+.bazi-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+#baziSource {
+  color: var(--teal);
+  font-weight: 700;
 }
 
 .fengshui-form {
@@ -1418,8 +1503,17 @@ textarea:focus {
   top: 182px;
 }
 
-.coin.tossing {
-  animation: coinToss 0.62s cubic-bezier(0.24, 0.72, 0.22, 1.08) var(--coin-delay, 0ms) both;
+/* 三枚铜钱各自抛落：不同旋向、落点、回弹与时长，错落散开而非整齐翻转 */
+.coin-one.tossing {
+  animation: coinTossA 0.74s cubic-bezier(0.32, 0.04, 0.3, 1) 0ms both;
+}
+
+.coin-two.tossing {
+  animation: coinTossB 0.66s cubic-bezier(0.32, 0.04, 0.3, 1) 120ms both;
+}
+
+.coin-three.tossing {
+  animation: coinTossC 0.82s cubic-bezier(0.32, 0.04, 0.3, 1) 55ms both;
 }
 
 .coin.tails {
@@ -1511,28 +1605,37 @@ textarea:focus {
   }
 }
 
-@keyframes coinToss {
-  0% {
-    transform: translate3d(0, -150px, 0) rotateX(0deg) rotate(-14deg) scale(0.7);
-    opacity: 0;
-  }
-  18% {
-    opacity: 1;
-  }
-  46% {
-    transform: translate3d(0, -34px, 0) rotateX(420deg) rotate(96deg) scale(0.98);
-    opacity: 1;
-  }
-  70% {
-    transform: translate3d(0, 6px, 0) rotateX(660deg) rotate(150deg) scale(1.05);
-  }
-  84% {
-    transform: translate3d(0, -8px, 0) rotateX(700deg) rotate(166deg) scale(0.99);
-  }
-  100% {
-    transform: translate3d(0, 0, 0) rotateX(720deg) rotate(172deg) scale(1);
-    opacity: 1;
-  }
+/* 抛物线下落 + 落地两次递减回弹 + 主平面旋转配轻微立体摆动（不完整翻面，避免单面图露背消失）。
+   percentage 疏密编码加速/减速：下落段间距大=快，落地回弹段密=细腻。 */
+@keyframes coinTossA {
+  0% { opacity: 0; transform: translate3d(-2px, -158px, 0) rotateZ(-25deg) rotateX(34deg) scale(0.72); }
+  12% { opacity: 1; }
+  50% { transform: translate3d(-12px, 3px, 0) rotateZ(150deg) rotateX(8deg) scale(1.06); }
+  64% { transform: translate3d(-17px, -24px, 0) rotateZ(205deg) rotateX(-13deg) scale(0.95); }
+  80% { transform: translate3d(-20px, 2px, 0) rotateZ(245deg) rotateX(4deg) scale(1.02); }
+  90% { transform: translate3d(-21px, -7px, 0) rotateZ(262deg) scale(0.99); }
+  100% { opacity: 1; transform: translate3d(-22px, 0, 0) rotateZ(268deg) scale(1); }
+}
+
+@keyframes coinTossB {
+  0% { opacity: 0; transform: translate3d(4px, -150px, 0) rotateZ(30deg) rotateX(-30deg) scale(0.7); }
+  12% { opacity: 1; }
+  48% { transform: translate3d(14px, 4px, 0) rotateZ(-160deg) rotateX(-6deg) scale(1.05); }
+  62% { transform: translate3d(18px, -28px, 0) rotateZ(-215deg) rotateX(16deg) scale(0.94); }
+  80% { transform: translate3d(21px, 3px, 0) rotateZ(-260deg) rotateX(-4deg) scale(1.02); }
+  91% { transform: translate3d(22px, -6px, 0) rotateZ(-278deg) scale(0.99); }
+  100% { opacity: 1; transform: translate3d(23px, 0, 0) rotateZ(-284deg) scale(1); }
+}
+
+@keyframes coinTossC {
+  0% { opacity: 0; transform: translate3d(0, -168px, 0) rotateZ(-12deg) rotateX(40deg) scale(0.74); }
+  12% { opacity: 1; }
+  46% { transform: translate3d(-3px, 1px, 0) rotateZ(190deg) rotateX(10deg) scale(1.07); }
+  58% { transform: translate3d(2px, -30px, 0) rotateZ(255deg) rotateX(-18deg) scale(0.93); }
+  72% { transform: translate3d(5px, 2px, 0) rotateZ(300deg) rotateX(6deg) scale(1.03); }
+  84% { transform: translate3d(3px, -12px, 0) rotateZ(325deg) scale(0.98); }
+  93% { transform: translate3d(2px, 1px, 0) rotateZ(338deg) scale(1.01); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) rotateZ(344deg) scale(1); }
 }
 
 @media (min-width: 700px) {

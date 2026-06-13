@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>天机快问</title>
-    <link rel="stylesheet" href="./src/styles.css?v=17" />
+    <link rel="stylesheet" href="./src/styles.css?v=18" />
   </head>
   <body>
     <main class="prototype-shell" data-state="idle" data-module="wengua">
@@ -33,6 +33,17 @@
         </nav>
 
         <section class="module-view active" id="wenguaModule">
+          <section class="daily-card" id="dailyCard" hidden aria-label="今日一卦">
+            <div class="daily-head">
+              <span class="daily-eyebrow" id="dailyEyebrow">今日天机</span>
+              <button class="daily-bell" id="dailyBell" type="button">每日提醒</button>
+            </div>
+            <div class="daily-body">
+              <strong class="daily-hex" id="dailyHex">—</strong>
+              <p class="daily-line" id="dailyLine">正在为你取今日一卦…</p>
+            </div>
+          </section>
+
           <section class="tray-stage" aria-label="三枚铜钱起卦动画">
             <div class="aura"></div>
             <button class="tray-button" id="trayButton" type="button" aria-label="点击天机盘开始起卦">
@@ -116,20 +127,21 @@
               <div class="element-row"><span>金</span><i style="--level: 61%"></i><strong>稳定</strong></div>
               <div class="element-row"><span>水</span><i style="--level: 46%"></i><strong>需补</strong></div>
             </div>
-            <div class="theme-cards">
+            <div class="theme-cards" id="baziThemeCards">
               <article>
                 <span>事业</span>
-                <p>适合以稳定积累换长期机会，先建立可信成果，再争取更大的职责。</p>
+                <p id="baziCareer">适合以稳定积累换长期机会，先建立可信成果，再争取更大的职责。</p>
               </article>
               <article>
                 <span>感情</span>
-                <p>关系里需要把期待说清楚，避免用沉默测试对方。</p>
+                <p id="baziLove">关系里需要把期待说清楚，避免用沉默测试对方。</p>
               </article>
               <article>
                 <span>年度趋势</span>
-                <p>今年宜整理资源、人脉和节奏，机会会在准备充分后变得更顺。</p>
+                <p id="baziYear">今年宜整理资源、人脉和节奏，机会会在准备充分后变得更顺。</p>
               </article>
             </div>
+            <p class="bazi-note" id="baziNote"><span id="baziSource"></span>四柱为原型示例命盘。结果为文化参考，不替代职业、医疗等专业意见。</p>
           </section>
         </section>
 
@@ -341,6 +353,6 @@
         </aside>
       </section>
     </main>
-    <script src="./src/app.js?v=17"></script>
+    <script src="./src/app.js?v=18"></script>
   </body>
 </html>
