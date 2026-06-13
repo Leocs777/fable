@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>天机快问</title>
+    <link rel="stylesheet" href="./src/styles.css?v=15" />
+  </head>
+  <body>
+    <main class="prototype-shell" data-state="idle" data-module="wengua">
+      <section class="phone" aria-label="天机快问原型">
+        <div class="casting-backdrop" aria-hidden="true"></div>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">问卦决策</p>
+            <h1>天机快问</h1>
+          </div>
+          <div class="top-actions">
+            <button class="text-button" id="privacyButton" type="button">隐私</button>
+            <button class="text-button" id="historyButton" type="button">历史</button>
+          </div>
+        </header>
+
+        <section class="time-row" aria-label="流程耗时">
+          <span>约 1 分钟完成</span>
+          <span>隐私保护 · 文化参考</span>
+        </section>
+
+        <nav class="module-tabs" aria-label="一期模块">
+          <button class="active" type="button" data-module-tab="wengua">问卦</button>
+          <button type="button" data-module-tab="bazi">八字</button>
+          <button type="button" data-module-tab="fengshui">风水</button>
+        </nav>
+
+        <section class="module-view active" id="wenguaModule">
+          <section class="tray-stage" aria-label="三枚铜钱起卦动画">
+            <div class="aura"></div>
+            <button class="tray-button" id="trayButton" type="button" aria-label="点击天机盘开始起卦">
+              <img class="tray-image" src="./assets/tianji-tray-empty.png" alt="无铜钱的天机盘" />
+            </button>
+            <div class="coin-layer" aria-hidden="true">
+              <img class="coin coin-one" src="./assets/coin-cutout.png" alt="" aria-hidden="true" />
+              <img class="coin coin-two" src="./assets/coin-cutout.png" alt="" aria-hidden="true" />
+              <img class="coin coin-three" src="./assets/coin-cutout.png" alt="" aria-hidden="true" />
+            </div>
+            <p class="tray-hint" id="trayHint">轻点天机盘，或点击下方按钮开始起卦</p>
+          </section>
+
+          <section class="question-panel" id="questionPanel">
+            <label for="questionInput">你现在最想确认什么？</label>
+            <textarea id="questionInput" maxlength="120" placeholder="把你正在纠结的问题写下来，例如：我该不该接受这个新机会？"></textarea>
+            <div class="input-meta">
+              <span id="clarityHint">专注一个问题，结果会更清晰</span>
+              <span><strong id="charCount">0</strong>/120</span>
+            </div>
+          </section>
+
+          <section class="chips" aria-label="常见问题方向">
+            <button type="button" data-chip="我该不该换工作？">工作</button>
+            <button type="button" data-chip="这段关系下一步该怎么走？">感情</button>
+            <button type="button" data-chip="现在适合搬家吗？">搬家</button>
+            <button type="button" data-chip="这件事什么时候推进更稳？">时机</button>
+          </section>
+
+          <section class="cast-steps" aria-label="起卦进度">
+            <div class="cast-step" data-step="1">
+              <span>第一次</span>
+              <strong>待掷</strong>
+            </div>
+            <div class="cast-step" data-step="2">
+              <span>第二次</span>
+              <strong>待掷</strong>
+            </div>
+            <div class="cast-step" data-step="3">
+              <span>第三次</span>
+              <strong>待掷</strong>
+            </div>
+          </section>
+
+          <button class="primary-action" id="castButton" type="button">
+            <span>掷铜钱</span>
+            <small id="buttonSubcopy">免费先看核心结论</small>
+          </button>
+
+          <section class="notes">
+            <p>涉及医疗、法律、财务、自伤等高风险问题，将提供安全反思，不作确定性建议。</p>
+            <p>深度报告可解锁动爻、时机窗口和追问解释。</p>
+          </section>
+        </section>
+
+        <section class="module-view" id="baziModule" aria-live="polite">
+          <section class="bazi-form">
+            <div>
+              <span class="form-kicker">四柱八字</span>
+              <h2>输入出生信息</h2>
+            </div>
+            <label for="birthDate">出生日期</label>
+            <input id="birthDate" type="date" value="1994-08-18" />
+            <label for="birthTime">出生时间</label>
+            <input id="birthTime" type="time" value="08:30" />
+            <label for="birthPlace">出生地</label>
+            <input id="birthPlace" type="text" value="上海" placeholder="城市，例如：上海" />
+            <div class="certainty-group" aria-label="时辰准确度">
+              <button class="active" type="button" data-time-certainty="accurate">准确时辰</button>
+              <button type="button" data-time-certainty="approx">大概时段</button>
+              <button type="button" data-time-certainty="unknown">不知道</button>
+            </div>
+            <button class="primary-action compact-action" id="baziButton" type="button">
+              <span>生成命盘</span>
+              <small id="baziSubcopy">先看基础四柱与五行</small>
+            </button>
+          </section>
+
+          <section class="bazi-result" id="baziResult" aria-hidden="true">
+            <div class="confidence-banner" id="confidenceBanner">置信度高：已使用准确时辰生成基础命盘。</div>
+            <div class="pillar-grid" aria-label="四柱">
+              <div><span>年柱</span><strong>甲戌</strong></div>
+              <div><span>月柱</span><strong>壬申</strong></div>
+              <div><span>日柱</span><strong>己巳</strong></div>
+              <div id="hourPillar"><span>时柱</span><strong>戊辰</strong></div>
+            </div>
+            <div class="element-panel">
+              <div class="element-row"><span>木</span><i style="--level: 42%"></i><strong>偏弱</strong></div>
+              <div class="element-row"><span>火</span><i style="--level: 58%"></i><strong>可用</strong></div>
+              <div class="element-row"><span>土</span><i style="--level: 76%"></i><strong>偏旺</strong></div>
+              <div class="element-row"><span>金</span><i style="--level: 61%"></i><strong>稳定</strong></div>
+              <div class="element-row"><span>水</span><i style="--level: 46%"></i><strong>需补</strong></div>
+            </div>
+            <div class="theme-cards">
+              <article>
+                <span>事业</span>
+                <p>适合以稳定积累换长期机会，先建立可信成果，再争取更大的职责。</p>
+              </article>
+              <article>
+                <span>感情</span>
+                <p>关系里需要把期待说清楚，避免用沉默测试对方。</p>
+              </article>
+              <article>
+                <span>年度趋势</span>
+                <p>今年宜整理资源、人脉和节奏，机会会在准备充分后变得更顺。</p>
+              </article>
+            </div>
+          </section>
+        </section>
+
+        <section class="module-view" id="fengshuiModule" aria-live="polite">
+          <section class="bazi-form fengshui-form">
+            <div>
+              <span class="form-kicker">风水 Lite</span>
+              <h2>手动输入房间</h2>
+            </div>
+            <label for="roomType">房间类型</label>
+            <select id="roomType">
+              <option value="卧室">卧室</option>
+              <option value="书房">书房</option>
+              <option value="客厅">客厅</option>
+              <option value="厨房">厨房</option>
+            </select>
+            <label for="roomDirection">主要朝向</label>
+            <select id="roomDirection">
+              <option value="东">东</option>
+              <option value="东南">东南</option>
+              <option value="南">南</option>
+              <option value="西南">西南</option>
+              <option value="西">西</option>
+              <option value="西北">西北</option>
+              <option value="北">北</option>
+              <option value="东北">东北</option>
+            </select>
+            <div class="layout-grid" aria-label="房间布局位置">
+              <button type="button" data-layout-choice="door">门在左侧</button>
+              <button type="button" data-layout-choice="window">窗在右侧</button>
+              <button type="button" data-layout-choice="bed">床靠北墙</button>
+              <button type="button" data-layout-choice="desk">桌面朝东</button>
+            </div>
+            <button class="primary-action compact-action" id="fengshuiButton" type="button">
+              <span>生成建议</span>
+              <small id="fengshuiSubcopy">输出可执行整改清单</small>
+            </button>
+          </section>
+
+          <section class="fengshui-result" id="fengshuiResult" aria-hidden="true">
+            <div class="room-map" aria-label="简易房间平面图">
+              <span class="map-door">门</span>
+              <span class="map-window">窗</span>
+              <span class="map-bed">床</span>
+              <span class="map-desk">桌</span>
+              <strong id="roomCompass">朝向：东</strong>
+            </div>
+            <div class="confidence-banner">以下为风水 Lite 手工输入建议，适合先做低成本调整。</div>
+            <div class="fengshui-checklist" id="fengshuiChecklist">
+              <div><strong>1</strong><span>床头保持靠实墙，减少悬空感，优先稳定睡眠区。</span></div>
+              <div><strong>2</strong><span>门口到床边保持通畅，不堆杂物，让动线更顺。</span></div>
+              <div><strong>3</strong><span>窗边适合留出采光，不把高柜直接压在主光源旁。</span></div>
+              <div><strong>4</strong><span>桌面朝东时保持左侧略高、右侧清爽，利于专注。</span></div>
+              <div><strong>5</strong><span>用一处温和照明补足暗角，避免房间只有单一顶光。</span></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="result-panel" id="resultPanel" aria-live="polite">
+          <div class="result-head">
+            <span>本卦：需</span>
+            <span>变卦：泰</span>
+          </div>
+          <h2>先稳住节奏，再择机推进</h2>
+          <p class="reading">当前更适合蓄力和整理资源，不宜仓促拍板。外部条件正在改善，把关键准备做扎实，会比立即冲刺更稳。</p>
+          <div class="actions">
+            <div><strong>1</strong><span>稳住当下：先梳理资源，减少不必要的分支。</span></div>
+            <div><strong>2</strong><span>主动蓄力：补齐关键能力，为下一步行动做准备。</span></div>
+            <div><strong>3</strong><span>择机推进：等待条件成熟，再果断出手。</span></div>
+          </div>
+          <button class="unlock" id="unlockButton" type="button">查看深度报告</button>
+          <button class="secondary-action" id="resetButton" type="button">再问一次</button>
+        </section>
+
+        <aside class="deep-report-drawer" id="deepReportDrawer" aria-hidden="true">
+          <div class="deep-card">
+            <div class="deep-head">
+              <div>
+                <span>深度报告</span>
+                <strong>需卦变泰卦</strong>
+              </div>
+              <button class="text-button" id="closeDeepReport" type="button">关闭</button>
+            </div>
+            <div class="deep-section">
+              <span>动爻提示</span>
+              <p>当前阻力来自节奏过急。先等资源、沟通和外部条件到位，再推进关键决定。</p>
+            </div>
+            <div class="deep-section">
+              <span>时机窗口</span>
+              <p>短期适合准备与确认边界；真正适合落子的窗口在条件明确、支持者出现之后。</p>
+            </div>
+            <div class="deep-section">
+              <span>追问方向</span>
+              <p>下一步可以追问“我现在最该补齐哪一项准备？”或“这个机会的主要风险在哪里？”</p>
+            </div>
+            <div class="unlocked-report" id="unlockedReport" aria-hidden="true">
+              <div class="deep-section">
+                <span>完整解读</span>
+                <p>需卦强调等待不是停滞，而是把关键条件养足。变泰卦说明阻塞会逐步打开，但前提是你先减少消耗，把注意力放在可控准备上。</p>
+              </div>
+              <div class="deep-section">
+                <span>风险雷达</span>
+                <p>不要被短期机会感催着马上承诺。真正的风险不是错过，而是在信息不完整时把资源押得太满。</p>
+              </div>
+              <div class="follow-up-box">
+                <label for="followUpInput">继续追问</label>
+                <textarea id="followUpInput" maxlength="80" placeholder="例如：我现在最该补齐哪一项准备？"></textarea>
+                <button class="secondary-action" id="followUpButton" type="button">生成追问回答</button>
+                <p id="followUpAnswer" aria-live="polite">解锁后可围绕同一卦象继续追问。</p>
+              </div>
+            </div>
+            <button class="unlock deep-cta" id="paywallButton" type="button">解锁完整追问</button>
+          </div>
+        </aside>
+
+        <aside class="paywall-drawer" id="paywallDrawer" aria-hidden="true">
+          <div class="paywall-card">
+            <div class="deep-head">
+              <div>
+                <span>付费解锁</span>
+                <strong>完整追问与深度报告</strong>
+              </div>
+              <button class="text-button" id="closePaywall" type="button">关闭</button>
+            </div>
+            <div class="paywall-options" aria-label="付费方案">
+              <button class="paywall-option selected" type="button" data-plan="subscription">
+                <span>月度订阅</span>
+                <strong>$9.99</strong>
+                <small>无限查看深度报告与追问</small>
+              </button>
+              <button class="paywall-option" type="button" data-plan="single">
+                <span>单次报告</span>
+                <strong>$2.99</strong>
+                <small>解锁本次卦象完整解释</small>
+              </button>
+            </div>
+            <button class="unlock" id="confirmPaywall" type="button">继续解锁</button>
+            <p class="paywall-note" id="paywallNote">内测原型仅演示购买流程，不会发起真实扣款。</p>
+          </div>
+        </aside>
+
+        <aside class="privacy-drawer" id="privacyDrawer" aria-hidden="true">
+          <div class="drawer-card privacy-card">
+            <div class="drawer-head">
+              <div>
+                <strong>隐私与同意</strong>
+                <span id="privacyStatus">首次使用前请确认</span>
+              </div>
+              <button class="text-button" id="closePrivacy" type="button">关闭</button>
+            </div>
+            <div class="privacy-points">
+              <div>
+                <strong>敏感信息</strong>
+                <p>问题、出生信息和户型资料会按敏感数据处理，仅用于生成你的报告。</p>
+              </div>
+              <div>
+                <strong>文化参考</strong>
+                <p>结果用于自我反思和文化娱乐，不替代医疗、法律、财务等专业意见。</p>
+              </div>
+              <div>
+                <strong>可删除</strong>
+                <p>历史记录支持查看和删除；后续账号版会补充导出与完整删除流程。</p>
+              </div>
+            </div>
+            <button class="unlock" id="acceptPrivacy" type="button">同意并继续</button>
+          </div>
+        </aside>
+
+        <aside class="history-drawer" id="historyDrawer" aria-hidden="true">
+          <div class="drawer-card">
+            <div class="drawer-head">
+              <div>
+                <strong>历史记录</strong>
+                <span id="historyCount">已保存 2 条</span>
+              </div>
+              <button class="text-button" id="closeHistory" type="button">关闭</button>
+            </div>
+            <div class="history-list" id="historyList">
+              <button class="history-item active" type="button" data-title="是否推进新的合作？" data-time="今天 08:42" data-hexagram="需 → 泰" data-summary="先稳住节奏，再择机推进。">
+                <span>今天 08:42</span>
+                <p>是否推进新的合作？</p>
+              </button>
+              <button class="history-item" type="button" data-title="这次面试后该主动跟进吗？" data-time="昨天 21:10" data-hexagram="谦 → 升" data-summary="主动但不催促，用补充信息建立确定感。">
+                <span>昨天 21:10</span>
+                <p>这次面试后该主动跟进吗？</p>
+              </button>
+            </div>
+            <div class="history-detail" id="historyDetail">
+              <span id="historyDetailTime">今天 08:42 · 需 → 泰</span>
+              <strong id="historyDetailTitle">是否推进新的合作？</strong>
+              <p id="historyDetailSummary">先稳住节奏，再择机推进。</p>
+            </div>
+            <p class="history-empty" id="historyEmpty" aria-hidden="true">记录已删除。新的问卦结果会继续保存在这里。</p>
+            <button class="danger-link" id="deleteHistory" type="button">删除全部记录</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script src="./src/app.js?v=15"></script>
+  </body>
+</html>
