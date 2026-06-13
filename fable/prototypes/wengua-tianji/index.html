@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>天机快问</title>
-    <link rel="stylesheet" href="./src/styles.css?v=15" />
+    <link rel="stylesheet" href="./src/styles.css?v=16" />
   </head>
   <body>
     <main class="prototype-shell" data-state="idle" data-module="wengua">
@@ -62,19 +62,9 @@
             <button type="button" data-chip="这件事什么时候推进更稳？">时机</button>
           </section>
 
-          <section class="cast-steps" aria-label="起卦进度">
-            <div class="cast-step" data-step="1">
-              <span>第一次</span>
-              <strong>待掷</strong>
-            </div>
-            <div class="cast-step" data-step="2">
-              <span>第二次</span>
-              <strong>待掷</strong>
-            </div>
-            <div class="cast-step" data-step="3">
-              <span>第三次</span>
-              <strong>待掷</strong>
-            </div>
+          <section class="hexagram-builder" id="hexagramBuilder" aria-label="六爻进度">
+            <div class="builder-lines" id="builderLines" aria-hidden="true"></div>
+            <p class="builder-caption" id="builderCaption">三枚铜钱掷六次，自下而上成卦</p>
           </section>
 
           <button class="primary-action" id="castButton" type="button">
@@ -199,10 +189,21 @@
         </section>
 
         <section class="result-panel" id="resultPanel" aria-live="polite">
-          <div class="result-head">
-            <span>本卦：需</span>
-            <span>变卦：泰</span>
+          <p class="result-question" id="resultQuestion">我该不该接受这个新机会？</p>
+          <div class="hexagram-pair" aria-label="本卦与变卦">
+            <div class="hexa-glyph">
+              <span>本卦</span>
+              <div class="glyph-lines" id="primaryGlyph"></div>
+              <strong id="primaryName">需</strong>
+            </div>
+            <div class="hexa-arrow" id="hexaArrow">→</div>
+            <div class="hexa-glyph" id="changedBlock">
+              <span>变卦</span>
+              <div class="glyph-lines" id="changedGlyph"></div>
+              <strong id="changedName">泰</strong>
+            </div>
           </div>
+          <p class="moving-note" id="movingNote">动爻：九三</p>
           <h2>先稳住节奏，再择机推进</h2>
           <p class="reading">当前更适合蓄力和整理资源，不宜仓促拍板。外部条件正在改善，把关键准备做扎实，会比立即冲刺更稳。</p>
           <div class="actions">
@@ -210,6 +211,7 @@
             <div><strong>2</strong><span>主动蓄力：补齐关键能力，为下一步行动做准备。</span></div>
             <div><strong>3</strong><span>择机推进：等待条件成熟，再果断出手。</span></div>
           </div>
+          <p class="result-disclaimer">卦象由确定性规则生成；解释文案为原型示例。结果为文化参考，不替代医疗、法律、财务等专业意见。</p>
           <button class="unlock" id="unlockButton" type="button">查看深度报告</button>
           <button class="secondary-action" id="resetButton" type="button">再问一次</button>
         </section>
@@ -338,6 +340,6 @@
         </aside>
       </section>
     </main>
-    <script src="./src/app.js?v=15"></script>
+    <script src="./src/app.js?v=16"></script>
   </body>
 </html>

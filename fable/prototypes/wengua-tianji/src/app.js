@@ -5,8 +5,16 @@ const castButton = document.querySelector("#castButton");
 const trayButton = document.querySelector("#trayButton");
 const trayHint = document.querySelector("#trayHint");
 const buttonSubcopy = document.querySelector("#buttonSubcopy");
+const castingBackdrop = document.querySelector(".casting-backdrop");
 const resultPanel = document.querySelector("#resultPanel");
-const resultHexagrams = Array.from(document.querySelectorAll(".result-head span"));
+const resultQuestion = document.querySelector("#resultQuestion");
+const primaryGlyph = document.querySelector("#primaryGlyph");
+const changedGlyph = document.querySelector("#changedGlyph");
+const primaryName = document.querySelector("#primaryName");
+const changedName = document.querySelector("#changedName");
+const changedBlock = document.querySelector("#changedBlock");
+const hexaArrow = document.querySelector("#hexaArrow");
+const movingNote = document.querySelector("#movingNote");
 const resultTitle = document.querySelector(".result-panel h2");
 const resultReading = document.querySelector(".result-panel .reading");
 const resultActions = Array.from(document.querySelectorAll(".result-panel .actions div span"));
@@ -14,6 +22,7 @@ const resetButton = document.querySelector("#resetButton");
 const unlockButton = document.querySelector("#unlockButton");
 const deepReportDrawer = document.querySelector("#deepReportDrawer");
 const closeDeepReport = document.querySelector("#closeDeepReport");
+const deepHexName = document.querySelector("#deepReportDrawer .deep-head strong");
 const unlockedReport = document.querySelector("#unlockedReport");
 const followUpInput = document.querySelector("#followUpInput");
 const followUpButton = document.querySelector("#followUpButton");
@@ -60,44 +69,295 @@ const roomCompass = document.querySelector("#roomCompass");
 const fengshuiChecklist = document.querySelector("#fengshuiChecklist");
 const layoutChoices = Array.from(document.querySelectorAll("[data-layout-choice]"));
 const chips = Array.from(document.querySelectorAll("[data-chip]"));
-const steps = Array.from(document.querySelectorAll(".cast-step"));
+const builderLines = document.querySelector("#builderLines");
+const builderCaption = document.querySelector("#builderCaption");
+const coins = Array.from(document.querySelectorAll(".coin"));
 
 const privacyConsentKey = "tianjiPrivacyAccepted";
 let casting = false;
+let skipRequested = false;
+let activeSkipHandler = null;
 let selectedPlan = "subscription";
 let deepReportUnlocked = false;
 let selectedTimeCertainty = "accurate";
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/* ---------------------------------------------------------------------------
+ * 六爻规则引擎（原型内置版）
+ * 金钱卦：三枚铜钱掷六次，自下而上成爻。
+ * 每枚铜钱 正面(阳)=3 / 反面(阴)=2，三枚之和：
+ *   6 = 老阴（动，阴变阳） 7 = 少阳 8 = 少阴 9 = 老阳（动，阳变阴）
+ * 本卦取爻的当前阴阳，变卦把动爻翻转。卦名按上/下三宫查表。
+ * ------------------------------------------------------------------------- */
+
+const TRIGRAM_NAMES = {
+  "111": "乾", "110": "兑", "101": "离", "100": "震",
+  "011": "巽", "010": "坎", "001": "艮", "000": "坤",
+};
+
+// HEX_NAMES[上卦][下卦] = 卦名（标准六十四卦方阵）
+const HEX_NAMES = {
+  乾: { 乾: "乾", 兑: "履", 离: "同人", 震: "无妄", 巽: "姤", 坎: "讼", 艮: "遁", 坤: "否" },
+  兑: { 乾: "夬", 兑: "兑", 离: "革", 震: "随", 巽: "大过", 坎: "困", 艮: "咸", 坤: "萃" },
+  离: { 乾: "大有", 兑: "睽", 离: "离", 震: "噬嗑", 巽: "鼎", 坎: "未济", 艮: "旅", 坤: "晋" },
+  震: { 乾: "大壮", 兑: "归妹", 离: "丰", 震: "震", 巽: "恒", 坎: "解", 艮: "小过", 坤: "豫" },
+  巽: { 乾: "小畜", 兑: "中孚", 离: "家人", 震: "益", 巽: "巽", 坎: "涣", 艮: "渐", 坤: "观" },
+  坎: { 乾: "需", 兑: "节", 离: "既济", 震: "屯", 巽: "井", 坎: "坎", 艮: "蹇", 坤: "比" },
+  艮: { 乾: "大畜", 兑: "损", 离: "贲", 震: "颐", 巽: "蛊", 坎: "蒙", 艮: "艮", 坤: "剥" },
+  坤: { 乾: "泰", 兑: "临", 离: "明夷", 震: "复", 巽: "升", 坎: "师", 艮: "谦", 坤: "坤" },
+};
+
+const LINE_TYPES = {
+  6: { label: "老阴", yang: false, moving: true },
+  7: { label: "少阳", yang: true, moving: false },
+  8: { label: "少阴", yang: false, moving: false },
+  9: { label: "老阳", yang: true, moving: true },
+};
+
+const POSITION_NAMES = ["初", "二", "三", "四", "五", "上"];
+
+function throwCoins() {
+  // 每枚铜钱：true = 正面(3)，false = 反面(2)
+  const faces = [Math.random() < 0.5, Math.random() < 0.5, Math.random() < 0.5];
+  const value = faces.reduce((sum, isHeads) => sum + (isHeads ? 3 : 2), 0);
+  return { faces, value };
+}
+
+function hexagramName(lines) {
+  // lines: 自下而上的 0/1 数组
+  const lower = TRIGRAM_NAMES[`${lines[0]}${lines[1]}${lines[2]}`];
+  const upper = TRIGRAM_NAMES[`${lines[3]}${lines[4]}${lines[5]}`];
+  return HEX_NAMES[upper][lower];
+}
+
+function buildCast(throws) {
+  const primaryLines = throws.map((t) => (LINE_TYPES[t.value].yang ? 1 : 0));
+  const changedLines = throws.map((t) => {
+    const type = LINE_TYPES[t.value];
+    if (!type.moving) return type.yang ? 1 : 0;
+    return type.yang ? 0 : 1;
+  });
+  const movingPositions = throws
+    .map((t, index) => (LINE_TYPES[t.value].moving ? index : -1))
+    .filter((index) => index >= 0);
+  const movingLabels = movingPositions.map((index) => {
+    const numeral = LINE_TYPES[throws[index].value].yang ? "九" : "六";
+    // 初/上爻为「初九」「上六」式，中间四爻为「九二」「六五」式
+    if (index === 0 || index === 5) return `${POSITION_NAMES[index]}${numeral}`;
+    return `${numeral}${POSITION_NAMES[index]}`;
+  });
+  return {
+    throws,
+    primaryLines,
+    changedLines,
+    movingPositions,
+    primaryName: hexagramName(primaryLines),
+    changedName: hexagramName(changedLines),
+    movingLabels,
+  };
+}
+
+/* 解释文案：原型示例，按卦名稳定取样，正式版由「规则结果 + 知识库 + AI 解释」替换 */
 const readingVariants = [
   {
-    primary: "需",
-    changed: "泰",
     title: "先稳住节奏，再择机推进",
     reading: "当前更适合蓄力和整理资源，不宜仓促拍板。外部条件正在改善，把关键准备做扎实，会比立即冲刺更稳。",
     actions: ["稳住当下：先梳理资源，减少不必要的分支。", "主动蓄力：补齐关键能力，为下一步行动做准备。", "择机推进：等待条件成熟，再果断出手。"]
   },
   {
-    primary: "谦",
-    changed: "升",
     title: "主动靠近，但别急着证明",
     reading: "局势适合低姿态推进。与其一次性争取结果，不如先建立信任、补充信息，让对方自然看到你的价值。",
     actions: ["先给价值：补一条对对方有帮助的信息。", "控制频率：主动跟进一次即可，不连续催促。", "留出余地：把选择权交给对方，避免压迫感。"]
   },
   {
-    primary: "观",
-    changed: "渐",
     title: "先看清格局，再小步试探",
     reading: "这件事还不到重押的时候。先观察关键人的态度和资源流向，用小动作验证方向，比直接摊牌更稳。",
     actions: ["观察信号：记录对方是否持续投入注意力。", "小步验证：先提出一个低成本试探方案。", "暂缓承诺：不要在信息不足时给长期承诺。"]
   },
   {
-    primary: "履",
-    changed: "中孚",
     title: "守住边界，用真诚换确定性",
     reading: "当前机会里有可推进的空间，但需要注意分寸。清楚表达立场，同时保持诚意，会比讨好或强推更有效。",
     actions: ["明确底线：先写下自己不能让步的条件。", "真诚沟通：把担忧说清楚，不用包装成绝对判断。", "稳步推进：先完成一个可交付的小结果。"]
   }
 ];
+
+function pickReading(cast) {
+  // 同一卦名稳定映射到同一示例文案，避免随机感
+  let hash = 0;
+  for (const char of cast.primaryName + cast.changedName) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 9973;
+  }
+  return readingVariants[hash % readingVariants.length];
+}
+
+/* ---------------------------------------------------------------------------
+ * 起卦动画与渲染
+ * ------------------------------------------------------------------------- */
+
+// ?slow=1 放慢节奏，便于设计评审逐掷查看
+const slowMode = new URLSearchParams(window.location.search).get("slow") === "1";
+const THROW_INTERVAL = slowMode ? 2200 : 880;
+const COIN_SETTLE = 620;
+
+function renderBuilderSlots() {
+  builderLines.innerHTML = POSITION_NAMES.map(
+    (name, index) => `
+    <div class="builder-line" data-line="${index}">
+      <span class="line-pos">${name}</span>
+      <span class="line-glyph"><i></i><i></i></span>
+      <span class="line-meta">待掷</span>
+    </div>`
+  ).reverse().join("");
+}
+
+function paintBuilderLine(index, throwResult) {
+  const slot = builderLines.querySelector(`[data-line="${index}"]`);
+  if (!slot) return;
+  const type = LINE_TYPES[throwResult.value];
+  slot.classList.add("cast", type.yang ? "yang" : "yin");
+  if (type.moving) slot.classList.add("moving");
+  const faceText = throwResult.faces.map((isHeads) => (isHeads ? "正" : "反")).join("");
+  slot.querySelector(".line-meta").textContent = `${faceText} · ${type.label}${type.moving ? " 动" : ""}`;
+}
+
+function animateCoins(throwResult) {
+  coins.forEach((coin, index) => {
+    coin.classList.remove("tossing");
+    // 强制 reflow 以便重新触发动画
+    void coin.offsetWidth;
+    coin.style.setProperty("--coin-delay", `${index * 70}ms`);
+    coin.classList.toggle("tails", !throwResult.faces[index]);
+    coin.classList.add("tossing");
+  });
+}
+
+function renderGlyph(container, lines, movingPositions, markMoving) {
+  // 显示顺序自上而下：上爻在最上
+  container.innerHTML = lines
+    .map((line, index) => {
+      const moving = markMoving && movingPositions.includes(index);
+      return `<span class="glyph-row ${line ? "yang" : "yin"}${moving ? " moving" : ""}"><i></i><i></i></span>`;
+    })
+    .reverse()
+    .join("");
+}
+
+function renderResult(cast) {
+  const reading = pickReading(cast);
+  resultQuestion.textContent = questionInput.value.trim() || "（未填写问题）";
+  renderGlyph(primaryGlyph, cast.primaryLines, cast.movingPositions, true);
+  primaryName.textContent = cast.primaryName;
+  const hasMoving = cast.movingPositions.length > 0;
+  changedBlock.style.display = hasMoving ? "" : "none";
+  hexaArrow.style.display = hasMoving ? "" : "none";
+  if (hasMoving) {
+    renderGlyph(changedGlyph, cast.changedLines, [], false);
+    changedName.textContent = cast.changedName;
+    movingNote.textContent = `动爻：${cast.movingLabels.join("、")}`;
+  } else {
+    movingNote.textContent = "无动爻：卦象安定，本卦即为最终参考。";
+  }
+  resultTitle.textContent = reading.title;
+  resultReading.textContent = reading.reading;
+  resultActions.forEach((action, index) => {
+    action.textContent = reading.actions[index];
+  });
+  if (deepHexName) {
+    deepHexName.textContent = hasMoving ? `${cast.primaryName}卦变${cast.changedName}卦` : `${cast.primaryName}卦（无动爻）`;
+  }
+}
+
+function finishCasting(cast) {
+  renderResult(cast);
+  shell.dataset.state = "result";
+  trayHint.textContent = "卦象已成";
+  builderCaption.textContent = "三枚铜钱掷六次，自下而上成卦";
+  buttonSubcopy.textContent = "深度报告可解锁";
+  castButton.disabled = false;
+  casting = false;
+  resultPanel.removeAttribute("aria-hidden");
+}
+
+function startCasting() {
+  if (casting) return;
+
+  casting = true;
+  skipRequested = false;
+  resultPanel.setAttribute("aria-hidden", "true");
+  shell.dataset.state = "casting";
+  trayHint.textContent = "轻点任意处可跳过动画";
+  castButton.disabled = true;
+  buttonSubcopy.textContent = "正在生成本卦与变卦";
+  renderBuilderSlots();
+
+  const throws = [];
+  let throwIndex = 0;
+  let nextThrowTimer = null;
+
+  function completeRemaining() {
+    if (!casting) return;
+    clearTimeout(nextThrowTimer);
+    while (throws.length < 6) {
+      throws.push(throwCoins());
+    }
+    throws.forEach((result, index) => paintBuilderLine(index, result));
+    finishCasting(buildCast(throws));
+  }
+
+  activeSkipHandler = completeRemaining;
+
+  function nextThrow() {
+    if (skipRequested) {
+      completeRemaining();
+      return;
+    }
+    if (throwIndex >= 6) {
+      nextThrowTimer = setTimeout(() => finishCasting(buildCast(throws)), 520);
+      return;
+    }
+    const current = throwIndex;
+    throwIndex += 1;
+    const result = throwCoins();
+    throws.push(result);
+    builderCaption.textContent = `第 ${current + 1} 掷 · 三枚铜钱落定中`;
+    animateCoins(result);
+    setTimeout(() => {
+      if (skipRequested || !casting) return;
+      paintBuilderLine(current, result);
+      const type = LINE_TYPES[result.value];
+      const faceText = result.faces.map((isHeads) => (isHeads ? "正" : "反")).join("");
+      builderCaption.textContent = `第 ${current + 1} 掷 · ${faceText} → ${type.label}${type.moving ? "（动）" : ""}`;
+    }, COIN_SETTLE);
+    nextThrowTimer = setTimeout(nextThrow, reduceMotion ? 60 : THROW_INTERVAL);
+  }
+
+  if (reduceMotion) {
+    completeRemaining();
+    return;
+  }
+  nextThrow();
+}
+
+function skipCasting() {
+  if (!casting || skipRequested) return;
+  skipRequested = true;
+  if (activeSkipHandler) activeSkipHandler();
+}
+
+function showResultState() {
+  const throws = Array.from({ length: 6 }, () => throwCoins());
+  renderBuilderSlots();
+  throws.forEach((result, index) => paintBuilderLine(index, result));
+  renderResult(buildCast(throws));
+  shell.dataset.state = "result";
+  trayHint.textContent = "卦象已成";
+  buttonSubcopy.textContent = "深度报告可解锁";
+  resultPanel.removeAttribute("aria-hidden");
+}
+
+/* ---------------------------------------------------------------------------
+ * 通用 UI（抽屉、模块切换、八字、风水）
+ * ------------------------------------------------------------------------- */
 
 function openDrawer(drawer) {
   drawer.classList.add("open");
@@ -196,65 +456,8 @@ function showFengshuiResult() {
   fengshuiSubcopy.textContent = `已生成 ${type} 建议`;
 }
 
-function setStep(index, state, label) {
-  const step = steps[index];
-  step.classList.remove("active", "done");
-  if (state) step.classList.add(state);
-  step.querySelector("strong").textContent = label;
-}
-
 function updateCount() {
   charCount.textContent = questionInput.value.length;
-}
-
-function applyRandomReading() {
-  const reading = readingVariants[Math.floor(Math.random() * readingVariants.length)];
-  resultHexagrams[0].textContent = `本卦：${reading.primary}`;
-  resultHexagrams[1].textContent = `变卦：${reading.changed}`;
-  resultTitle.textContent = reading.title;
-  resultReading.textContent = reading.reading;
-  resultActions.forEach((action, index) => {
-    action.textContent = reading.actions[index];
-  });
-}
-
-function startCasting() {
-  if (casting) return;
-
-  casting = true;
-  resultPanel.setAttribute("aria-hidden", "true");
-  shell.dataset.state = "casting";
-  trayHint.textContent = "天机盘已启，三枚铜钱正在落定";
-  castButton.disabled = true;
-  buttonSubcopy.textContent = "正在生成本卦与变卦";
-
-  steps.forEach((_, index) => setStep(index, "", "待掷"));
-
-  setTimeout(() => setStep(0, "active", "落下"), 420);
-  setTimeout(() => setStep(0, "done", "已定"), 4380);
-  setTimeout(() => setStep(1, "active", "落下"), 1240);
-  setTimeout(() => setStep(1, "done", "已定"), 5320);
-  setTimeout(() => setStep(2, "active", "落下"), 2040);
-  setTimeout(() => setStep(2, "done", "已定"), 6120);
-
-  setTimeout(() => {
-    applyRandomReading();
-    shell.dataset.state = "result";
-    trayHint.textContent = "卦象已成";
-    buttonSubcopy.textContent = "深度报告可解锁";
-    castButton.disabled = false;
-    casting = false;
-    resultPanel.removeAttribute("aria-hidden");
-  }, 6900);
-}
-
-function showResultState() {
-  steps.forEach((_, index) => setStep(index, "done", "已成"));
-  applyRandomReading();
-  shell.dataset.state = "result";
-  trayHint.textContent = "卦象已成";
-  buttonSubcopy.textContent = "深度报告可解锁";
-  resultPanel.removeAttribute("aria-hidden");
 }
 
 chips.forEach((chip) => {
@@ -269,7 +472,14 @@ chips.forEach((chip) => {
 
 questionInput.addEventListener("input", updateCount);
 castButton.addEventListener("click", startCasting);
-trayButton.addEventListener("click", startCasting);
+trayButton.addEventListener("click", () => {
+  if (casting) {
+    skipCasting();
+    return;
+  }
+  startCasting();
+});
+castingBackdrop.addEventListener("click", skipCasting);
 
 moduleTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
@@ -296,8 +506,11 @@ fengshuiButton.addEventListener("click", showFengshuiResult);
 
 resetButton.addEventListener("click", () => {
   shell.dataset.state = "idle";
+  coins.forEach((coin) => coin.classList.remove("tossing", "tails"));
   trayHint.textContent = "轻点天机盘，或点击下方按钮开始起卦";
   buttonSubcopy.textContent = "免费先看核心结论";
+  builderCaption.textContent = "三枚铜钱掷六次，自下而上成卦";
+  renderBuilderSlots();
   closeDrawer(deepReportDrawer);
   closeDrawer(paywallDrawer);
   closeDrawer(historyDrawer);
@@ -309,7 +522,6 @@ resetButton.addEventListener("click", () => {
   followUpInput.value = "";
   followUpAnswer.textContent = "解锁后可围绕同一卦象继续追问。";
   followUpAnswer.parentElement.classList.remove("answered");
-  steps.forEach((_, index) => setStep(index, "", "待掷"));
   questionInput.focus();
 });
 
@@ -426,6 +638,7 @@ deleteHistory.addEventListener("click", () => {
 });
 
 updateCount();
+renderBuilderSlots();
 
 if (localStorage.getItem(privacyConsentKey) === "true") {
   privacyStatus.textContent = "已同意";
@@ -457,7 +670,5 @@ if (params.get("state") === "history") {
 if (params.get("state") === "casting") {
   questionInput.value = "我该不该接受这个新机会？";
   updateCount();
-  shell.dataset.state = "casting";
-  trayHint.textContent = "天机盘已启，三枚铜钱正在落定";
-  setStep(0, "active", "落下");
+  startCasting();
 }

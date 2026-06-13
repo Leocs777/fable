@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wengua-tianji",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["fable/prototypes/wengua-tianji/server.mjs"],
+      "port": 4174
+    }
+  ]
+}
