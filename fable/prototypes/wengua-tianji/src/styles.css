@@ -765,6 +765,232 @@ textarea:focus {
   animation: interpretPulse 1.3s ease-in-out infinite;
 }
 
+/* hidden 属性需压过 .primary-action 等的 display 设置 */
+[hidden] {
+  display: none !important;
+}
+
+/* ---- 术数选择器 ---- */
+.method-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+
+.method-tabs button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.method-tabs button.active {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+/* ---- 通用术数起卦区 ---- */
+.divine-intro {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.divine-result {
+  margin-top: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: #fcf8ef;
+  box-shadow: var(--soft-shadow);
+  display: none;
+}
+
+.divine-result.show {
+  display: block;
+}
+
+.divine-result .result-question {
+  margin-bottom: 10px;
+}
+
+.divine-result h2 {
+  margin: 10px 0 0;
+  font-size: 24px;
+  line-height: 1.22;
+}
+
+.divine-result .reading {
+  margin: 8px 0 0;
+}
+
+.divine-result .actions {
+  margin-top: 12px;
+}
+
+.divine-chartnote {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.divine-result[data-interpret="loading"] h2,
+.divine-result[data-interpret="loading"] .reading {
+  color: var(--muted);
+  animation: interpretPulse 1.3s ease-in-out infinite;
+}
+
+.divine-result.safety h2 {
+  color: var(--cinnabar-dark);
+}
+
+#divineSource {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+/* 梅花盘面 */
+.mh-pair {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 6px 0;
+}
+
+.mh-glyph {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.mh-glyph > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.mh-glyph strong {
+  font-family: "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 19px;
+}
+
+.mh-arrow {
+  color: var(--gold);
+  font-size: 18px;
+}
+
+.mh-bodyuse {
+  margin: 6px 0 0;
+  text-align: center;
+  color: var(--teal);
+  font-size: 12px;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+/* 奇门九宫 */
+.qm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.qm-cell {
+  min-height: 56px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.45);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.qm-pos {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.qm-cell strong {
+  font-family: "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 18px;
+  color: var(--cinnabar-dark);
+}
+
+.qm-gate {
+  font-size: 11px;
+  color: #5a4c39;
+}
+
+.qm-meta {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--teal);
+  font-size: 12px;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+/* 六壬四课三传 */
+.lr-meta {
+  text-align: center;
+  color: var(--teal);
+  font-size: 12px;
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+  margin-bottom: 8px;
+}
+
+.lr-lessons,
+.lr-transmissions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.lr-transmissions {
+  margin-top: 8px;
+}
+
+.lr-lesson,
+.lr-trans {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.45);
+  font-family: "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+
+.lr-lesson span,
+.lr-trans span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.lr-lesson strong,
+.lr-trans strong {
+  font-family: "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 16px;
+}
+
+.lr-lesson em {
+  font-style: normal;
+  color: #5a4c39;
+  font-size: 13px;
+}
+
 .fengshui-form {
   gap: 11px;
 }

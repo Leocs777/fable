@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>天机快问</title>
-    <link rel="stylesheet" href="./src/styles.css?v=19" />
+    <link rel="stylesheet" href="./src/styles.css?v=21" />
   </head>
   <body>
     <main class="prototype-shell" data-state="idle" data-module="wengua">
@@ -43,6 +43,13 @@
               <p class="daily-line" id="dailyLine">正在为你取今日一卦…</p>
             </div>
           </section>
+
+          <nav class="method-tabs" id="methodTabs" aria-label="术数选择">
+            <button class="active" type="button" data-method="liuyao">六爻</button>
+            <button type="button" data-method="meihua">梅花</button>
+            <button type="button" data-method="qimen">奇门</button>
+            <button type="button" data-method="daliuren">六壬</button>
+          </nav>
 
           <section class="tray-stage" aria-label="三枚铜钱起卦动画">
             <div class="aura"></div>
@@ -86,6 +93,25 @@
           <section class="notes">
             <p>涉及医疗、法律、财务、自伤等高风险问题，将提供安全反思，不作确定性建议。</p>
             <p>深度报告可解锁动爻、时机窗口和追问解释。</p>
+          </section>
+
+          <section class="divine-stage" id="divineStage" hidden>
+            <p class="divine-intro" id="divineIntro"></p>
+            <button class="primary-action" id="divineButton" type="button">
+              <span id="divineButtonText">以此刻起卦</span>
+              <small id="divineButtonSub">免费先看核心结论</small>
+            </button>
+            <section class="divine-result" id="divineResult" aria-hidden="true">
+              <p class="result-question" id="divineQuestion"></p>
+              <div class="divine-chart" id="divineChart"></div>
+              <p class="divine-chartnote" id="divineChartNote" hidden></p>
+              <h2 id="divineTitle"></h2>
+              <p class="reading" id="divineReading"></p>
+              <div class="actions" id="divineActions"></div>
+              <p class="risk-notice" id="divineRisk" hidden></p>
+              <p class="result-disclaimer"><span id="divineSource"></span>盘面由确定性规则生成。结果为文化参考，不替代医疗、法律、财务等专业意见。</p>
+              <button class="secondary-action" id="divineReset" type="button">再起一次</button>
+            </section>
           </section>
         </section>
 
@@ -353,6 +379,6 @@
         </aside>
       </section>
     </main>
-    <script src="./src/app.js?v=19"></script>
+    <script src="./src/app.js?v=21"></script>
   </body>
 </html>

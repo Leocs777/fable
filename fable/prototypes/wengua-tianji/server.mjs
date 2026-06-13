@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { networkInterfaces } from "node:os";
 import { HEXAGRAM_MEANINGS, classifyRisk } from "./src/hexagrams.mjs";
+import { castDivination } from "./src/divination.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 4174);
@@ -395,6 +396,123 @@ async function handleFengshui(request, response) {
   }
 }
 
+// ---- 多术数解读（梅花/奇门/六壬）----
+const DIVINE_METHOD_DESC = {
+  meihua:
+    "你按梅花易数解读：体卦代表求测者自身，用卦代表所问之事，重点看体用之间的五行生克与旺衰——用生体、体克用多吉，用克体多不利。",
+  qimen:
+    "你按奇门遁甲意象解读：参考值符落宫、八门吉凶（开/休/生为吉，伤/杜/景/死/惊为平或凶）与方位。这是原型简化局，重在给方位与时机的方向性参考。",
+  daliuren:
+    "你按大六壬意象解读：四课看人我关系与现状，三传看事情的初传（起因/当下）、中传（过程）、末传（结果走向）。这是原型简化课，重在给事情发展的方向性参考。",
+};
+
+function divineSystem(method) {
+  return `你是 Fable App 的术数解读引擎。盘面由规则引擎起出，你只负责把它翻译成贴合用户问题的白话解读，绝不改动盘面或编造。
+
+${DIVINE_METHOD_DESC[method]}
+
+铁律：
+1. 解读紧扣用户的具体问题，不给放之四海皆准的空话。
+2. 只依据提供的盘面解读；奇门/六壬是原型简化盘，不要假装精确排盘，可用"盘面倾向""参考方向"这类措辞。
+3. 白话、不堆术语；输出一句话结论 + 局势解释 + 恰好 3 条今天就能做的具体建议。
+4. 不做确定性承诺，不说"一定""注定"。
+5. 涉及医疗诊断/用药、法律诉讼、赌博高杠杆等高风险问题，safety_block=true、改为建议咨询专业人士、confidence=low。换工作/创业/搬家/感情等正常人生决策正常解读。
+6. confidence 不轻易给 high。`;
+}
+
+function buildDivineMessage(method, chart, question) {
+  const q = `用户的问题：${question || "（未填写）"}`;
+  if (method === "meihua") {
+    return [
+      q,
+      "",
+      `梅花易数（${chart.timeLabel} 起卦）：`,
+      `- 本卦：${chart.hexagram}——${HEXAGRAM_MEANINGS[chart.hexagram] || ""}`,
+      `- 体卦：${chart.bodyTrigram}（求测者自身），用卦：${chart.useTrigram}（所问之事）`,
+      `- 动爻：第 ${chart.moving} 爻；变卦：${chart.changed}——${HEXAGRAM_MEANINGS[chart.changed] || ""}`,
+      "",
+      "请以体用生克为纲，针对问题给出白话解读。",
+    ].join("\n");
+  }
+  if (method === "qimen") {
+    return [
+      q,
+      "",
+      `奇门遁甲（${chart.dun} ${chart.ju} 局，${chart.timeLabel}）：`,
+      `- 值符落宫：${chart.fuPalace}宫`,
+      `- 九宫（宫·方位·地盘干·八门）：${chart.palaces.map((p) => `${p.name}${p.dir}${p.stem}${p.gate}`).join("；")}`,
+      "",
+      "这是原型简化局，请基于盘面意象，针对问题给方位、时机与行动的方向性参考，不要假装是精确排盘。",
+    ].join("\n");
+  }
+  // daliuren
+  return [
+    q,
+    "",
+    `大六壬（${chart.dayGanzhi}日，月将 ${chart.monthGeneral}，${chart.hour}时）：`,
+    `- 四课：${chart.fourLessons.map((l) => `${l.label} ${l.lower}/${l.upper}`).join("，")}`,
+    `- 三传：${chart.transmissions.map((t) => `${t.label} ${t.branch}`).join("，")}`,
+    "",
+    "这是原型简化课，请以四课三传看事情初/中/末发展，针对问题给方向性参考，不要假装是精确排盘。",
+  ].join("\n");
+}
+
+const CRISIS_READING = {
+  safety_block: true,
+  confidence: "low",
+  title: "这件事值得认真对待",
+  interpretation: "听起来你正承受很重的压力。这不是卦象能回答的问题，也不该由一个 App 替你判断。",
+  actions: [
+    "现在联系信任的人：找一位家人或朋友说说当下的感受。",
+    "寻求专业帮助：美国可拨打或发短信 988（自杀与危机生命线，24 小时）。",
+    "若有立即危险：请拨打当地紧急电话。",
+  ],
+  risk_notice: "Fable 是文化参考工具，不能替代专业心理或医疗帮助。",
+};
+
+async function handleDivine(request, response) {
+  let payload;
+  try {
+    payload = await readBody(request);
+  } catch {
+    sendJson(response, 400, { error: "bad_request" });
+    return;
+  }
+  const { method, question, time } = payload;
+  if (!["meihua", "qimen", "daliuren"].includes(method)) {
+    sendJson(response, 400, { error: "bad_method" });
+    return;
+  }
+  if (classifyRisk(question) === "crisis") {
+    sendJson(response, 200, { chart: null, reading: CRISIS_READING });
+    return;
+  }
+  let chart;
+  try {
+    chart = castDivination(method, time ? new Date(time) : new Date());
+  } catch {
+    sendJson(response, 400, { error: "cast_failed" });
+    return;
+  }
+  const config = await resolveConfig();
+  if (!config) {
+    sendJson(response, 503, { error: "no_api_key", chart });
+    return;
+  }
+  try {
+    const reading = await callLLM(config, {
+      system: divineSystem(method),
+      user: buildDivineMessage(method, chart, question),
+      schema: INTERPRET_SCHEMA,
+      schemaName: "divine_reading",
+    });
+    sendJson(response, 200, { chart, reading });
+  } catch (err) {
+    console.error(`divine ${method} failed (${config.provider}):`, err.status || "", err.message, err.detail || "");
+    sendJson(response, 502, { error: "model_failed", chart });
+  }
+}
+
 const server = createServer(async (request, response) => {
   const rawPath = decodeURIComponent(request.url.split("?")[0]);
 
@@ -410,6 +528,11 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "POST" && rawPath === "/api/fengshui") {
     await handleFengshui(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && rawPath === "/api/divine") {
+    await handleDivine(request, response);
     return;
   }
 

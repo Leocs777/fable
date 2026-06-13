@@ -72,6 +72,25 @@ const dailyEyebrow = document.querySelector("#dailyEyebrow");
 const dailyHex = document.querySelector("#dailyHex");
 const dailyLine = document.querySelector("#dailyLine");
 const dailyBell = document.querySelector("#dailyBell");
+const methodTabs = Array.from(document.querySelectorAll("[data-method]"));
+const trayStage = document.querySelector(".tray-stage");
+const wenguaNotes = document.querySelector("#wenguaModule .notes");
+const hexagramBuilderEl = document.querySelector("#hexagramBuilder");
+const divineStage = document.querySelector("#divineStage");
+const divineIntro = document.querySelector("#divineIntro");
+const divineButton = document.querySelector("#divineButton");
+const divineButtonText = document.querySelector("#divineButtonText");
+const divineButtonSub = document.querySelector("#divineButtonSub");
+const divineResult = document.querySelector("#divineResult");
+const divineQuestion = document.querySelector("#divineQuestion");
+const divineChart = document.querySelector("#divineChart");
+const divineChartNote = document.querySelector("#divineChartNote");
+const divineTitle = document.querySelector("#divineTitle");
+const divineReading = document.querySelector("#divineReading");
+const divineActions = document.querySelector("#divineActions");
+const divineRisk = document.querySelector("#divineRisk");
+const divineSource = document.querySelector("#divineSource");
+const divineReset = document.querySelector("#divineReset");
 const roomType = document.querySelector("#roomType");
 const roomDirection = document.querySelector("#roomDirection");
 const fengshuiButton = document.querySelector("#fengshuiButton");
@@ -584,6 +603,154 @@ async function fetchDaily() {
   }
 }
 
+/* ---------------- 多术数：选择器 + 起卦 + 盘面 ---------------- */
+let selectedMethod = "liuyao";
+let divineReqId = 0;
+
+const DIVINE_INFO = {
+  meihua: { intro: "梅花易数：以此刻的时间起卦，看体用生克。", btn: "以此刻起卦" },
+  qimen: { intro: "奇门遁甲：以此刻起局，看用神落宫与八门方位（原型简化局）。", btn: "以此刻起局" },
+  daliuren: { intro: "大六壬：以此刻起课，看四课三传（原型简化课）。", btn: "以此刻起课" },
+};
+
+function setMethod(method) {
+  selectedMethod = method;
+  methodTabs.forEach((t) => t.classList.toggle("active", t.dataset.method === method));
+  const isLiuyao = method === "liuyao";
+  trayStage.hidden = !isLiuyao;
+  hexagramBuilderEl.hidden = !isLiuyao;
+  castButton.hidden = !isLiuyao;
+  wenguaNotes.hidden = !isLiuyao;
+  shell.dataset.state = "idle"; // 复位六爻结果 overlay
+  divineStage.hidden = isLiuyao;
+  divineResult.classList.remove("show", "safety");
+  divineResult.setAttribute("aria-hidden", "true");
+  if (!isLiuyao) {
+    divineIntro.textContent = DIVINE_INFO[method].intro;
+    divineButtonText.textContent = DIVINE_INFO[method].btn;
+    divineButtonSub.textContent = "免费先看核心结论";
+    divineButton.disabled = false;
+  }
+}
+
+function glyphHTML(lines, movingIdx) {
+  const rows = lines
+    .map((line, i) => {
+      const moving = i === movingIdx ? " moving" : "";
+      return `<span class="glyph-row ${line ? "yang" : "yin"}${moving}"><i></i><i></i></span>`;
+    })
+    .reverse()
+    .join("");
+  return `<div class="glyph-lines">${rows}</div>`;
+}
+
+function renderChart(method, chart) {
+  if (!chart) {
+    divineChart.innerHTML = "";
+    divineChartNote.hidden = true;
+    return;
+  }
+  if (method === "meihua") {
+    divineChart.innerHTML = `
+      <div class="mh-pair">
+        <div class="mh-glyph"><span>本卦</span>${glyphHTML(chart.lines, chart.moving - 1)}<strong>${chart.hexagram}</strong></div>
+        <div class="mh-arrow">→</div>
+        <div class="mh-glyph"><span>变卦</span>${glyphHTML(chart.changedLines, -1)}<strong>${chart.changed}</strong></div>
+      </div>
+      <p class="mh-bodyuse">体卦 ${chart.bodyTrigram} · 用卦 ${chart.useTrigram} · 动第 ${chart.moving} 爻</p>`;
+    divineChartNote.hidden = true;
+  } else if (method === "qimen") {
+    const order = [3, 8, 1, 2, 4, 6, 7, 0, 5]; // 洛书显示位 → palaces 索引
+    const cells = order
+      .map((i) => {
+        const p = chart.palaces[i];
+        return `<div class="qm-cell"><span class="qm-pos">${p.name}·${p.dir}</span><strong>${p.stem}</strong><span class="qm-gate">${p.gate || "—"}</span></div>`;
+      })
+      .join("");
+    divineChart.innerHTML = `<div class="qm-grid">${cells}</div><p class="qm-meta">${chart.dun} ${chart.ju} 局 · 值符落 ${chart.fuPalace} 宫</p>`;
+    divineChartNote.textContent = chart.note;
+    divineChartNote.hidden = false;
+  } else {
+    const lessons = chart.fourLessons
+      .map((l) => `<div class="lr-lesson"><span>${l.label}</span><strong>${l.upper}</strong><em>${l.lower}</em></div>`)
+      .join("");
+    const trans = chart.transmissions
+      .map((t) => `<div class="lr-trans"><span>${t.label}</span><strong>${t.branch}</strong></div>`)
+      .join("");
+    divineChart.innerHTML = `
+      <div class="lr-meta">${chart.dayGanzhi}日 · 月将 ${chart.monthGeneral} · ${chart.hour}时</div>
+      <div class="lr-lessons">${lessons}</div>
+      <div class="lr-transmissions">${trans}</div>`;
+    divineChartNote.textContent = chart.note;
+    divineChartNote.hidden = false;
+  }
+}
+
+function applyDivineReading(r) {
+  divineResult.dataset.interpret = "done";
+  divineResult.classList.toggle("safety", Boolean(r.safety_block));
+  divineTitle.textContent = r.title || "";
+  divineReading.textContent = r.interpretation || "";
+  divineActions.innerHTML = (r.actions || [])
+    .map((a, i) => `<div><strong>${i + 1}</strong><span></span></div>`)
+    .join("");
+  Array.from(divineActions.querySelectorAll("span")).forEach((span, i) => {
+    span.textContent = (r.actions || [])[i] || "";
+  });
+  if (r.risk_notice) {
+    divineRisk.textContent = r.risk_notice;
+    divineRisk.hidden = false;
+  } else {
+    divineRisk.hidden = true;
+  }
+  divineSource.textContent = r.safety_block ? "安全提示 · " : "AI 解读 · ";
+}
+
+async function requestDivine(method) {
+  const reqId = (divineReqId += 1);
+  divineResult.classList.add("show");
+  divineResult.classList.remove("safety");
+  divineResult.setAttribute("aria-hidden", "false");
+  divineResult.dataset.interpret = "loading";
+  divineQuestion.textContent = questionInput.value.trim() || "（未填写问题）";
+  divineChart.innerHTML = "";
+  divineChartNote.hidden = true;
+  divineTitle.textContent = "正在起盘并生成解读…";
+  divineReading.textContent = "规则引擎起盘后，AI 正在针对你的问题解读。";
+  divineActions.innerHTML = '<div><strong>·</strong><span>…</span></div>'.repeat(3);
+  divineRisk.hidden = true;
+  divineSource.textContent = "";
+  divineButton.disabled = true;
+  try {
+    const res = await fetch("/api/divine", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ method, question: questionInput.value.trim(), time: new Date().toISOString() }),
+    });
+    if (reqId !== divineReqId) return;
+    const data = await res.json().catch(() => ({}));
+    if (reqId !== divineReqId) return;
+    renderChart(method, data.chart);
+    if (res.ok && data.reading && data.reading.title) {
+      applyDivineReading(data.reading);
+    } else {
+      divineResult.dataset.interpret = "done";
+      divineTitle.textContent = "盘面已起，解读待配置 AI";
+      divineReading.textContent = "已按规则起出盘面（见上）。配置 API key 后可生成贴合你问题的白话解读。";
+      divineActions.innerHTML = "";
+      divineSource.textContent = "仅盘面（未配置 AI）· ";
+    }
+  } catch {
+    if (reqId !== divineReqId) return;
+    divineResult.dataset.interpret = "done";
+    divineTitle.textContent = "起盘失败";
+    divineReading.textContent = "网络或服务异常，请稍后再试。";
+    divineActions.innerHTML = "";
+  } finally {
+    if (reqId === divineReqId) divineButton.disabled = false;
+  }
+}
+
 function fengshuiFallback(type, direction) {
   const roomSpecific = {
     "卧室": "床头保持靠实墙，床边至少留出一侧顺畅通道，先稳睡眠区。",
@@ -861,6 +1028,18 @@ dailyBell.addEventListener("click", () => {
 });
 setBell(localStorage.getItem(dailyBellKey) === "true");
 fetchDaily();
+
+// 术数选择器
+methodTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setMethod(tab.dataset.method));
+});
+divineButton.addEventListener("click", () => requestDivine(selectedMethod));
+divineReset.addEventListener("click", () => {
+  divineReqId += 1;
+  divineResult.classList.remove("show", "safety");
+  divineResult.setAttribute("aria-hidden", "true");
+  questionInput.focus();
+});
 
 if (localStorage.getItem(privacyConsentKey) === "true") {
   privacyStatus.textContent = "已同意";
