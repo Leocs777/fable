@@ -46,9 +46,10 @@ export function RitualGlow({ glow, clock, width, height, center }: Props) {
     });
   }, [width, height]);
 
-  // 两层柔烟缓慢反向平移
-  const smokeA = useDerivedValue(() => clock.value * 36 - 18);
-  const smokeB = useDerivedValue(() => -clock.value * 28 + 14);
+  // 两层柔烟缓慢反向平移。
+  // Skia 的 transform 不接受「数组内嵌 derived value」，必须整个 transform 作为一个 derived。
+  const smokeATransform = useDerivedValue(() => [{ translateX: clock.value * 36 - 18 }]);
+  const smokeBTransform = useDerivedValue(() => [{ translateX: -clock.value * 28 + 14 }]);
 
   // 落地金光透明度
   const glowOpacity = useDerivedValue(() => glow.value);
@@ -66,12 +67,12 @@ export function RitualGlow({ glow, clock, width, height, center }: Props) {
 
       {/* 柔烟（两层低透明 blurred 圆，缓动） */}
       <Group opacity={0.5}>
-        <Group transform={[{ translateX: smokeA }]}>
+        <Group transform={smokeATransform}>
           <Circle cx={width * 0.32} cy={height * 0.4} r={width * 0.5} color={RITUAL_COLORS.smoke}>
             <Blur blur={48} />
           </Circle>
         </Group>
-        <Group transform={[{ translateX: smokeB }]}>
+        <Group transform={smokeBTransform}>
           <Circle cx={width * 0.7} cy={height * 0.62} r={width * 0.46} color={RITUAL_COLORS.smoke}>
             <Blur blur={56} />
           </Circle>

@@ -2,57 +2,28 @@
 
 沉浸式起卦仪式：暗夜柔烟中，铜罗盘呼吸 → 加速旋转 → 减速，三枚铜钱自上方错落落下、旋转、弹跳落定，落地瞬间罗盘轻震并迸出放射金光，随后结果卡柔和浮现。调性为暗铜 / 古金 / 玉绿 / 柔烟，克制、仪式感、非游戏化。
 
-> ⚠️ **这是参考实现，未在真机/模拟器跑过**（本仓库的可运行原型是 `wengua-tianji` 的 Web 版，环境跑不了 RN）。代码按 **react-native-reanimated 3** 与 **@shopify/react-native-skia 1.x** 的 API 编写；集成到你的 Expo 项目后，按实际版本可能要微调（个别 prop 名/类型）。
+> ✅ **这是一个可直接运行的 Expo 项目**（不只是代码片段）。已在本机用真实依赖做过静态验证：`tsc --noEmit` 类型检查通过、`expo export`（Metro 打包，1080 模块）成功。**运行时画面仍需在你的设备/模拟器上看**——这台机器没有模拟器，我无法替你截图确认观感。
+>
+> 实测依赖版本：**expo 52 · react-native 0.76 · react-native-reanimated 3.16 · @shopify/react-native-skia 1.5 · react-native-gesture-handler 2.20 · expo-asset**。版本都钉在 `package.json` 里。
 
-## 依赖
+## 运行
 
 ```bash
-npx expo install react-native-reanimated @shopify/react-native-skia
-# 可选（若用 Rive 罗盘资产）：
-# npx expo install rive-react-native
+cd fable/prototypes/luopan-ritual-rn
+npm install
+npx expo start        # 用 Expo Go 扫码，或按 i / a 开 iOS / Android 模拟器
 ```
 
-`babel.config.js` 必须启用 reanimated 插件（放在 plugins 最后一项）：
+入口是 `App.tsx`（已接好 `LuopanRitual`），资产在 `assets/compass.png` 与 `assets/coin.png`（已从 `wengua-tianji/assets/` 复制好）。`result` 字段实际应由规则引擎 + `/api/divine` 解读后端在起卦前准备好——动画只负责揭晓。
 
-```js
-module.exports = function (api) {
-  api.cache(true);
-  return { presets: ["babel-preset-expo"], plugins: ["react-native-reanimated/plugin"] };
-};
-```
+## 复制到你已有的 Expo 项目
 
-## 资产
+如果你已有 App，把 `ritual/` 目录和两张资产拷过去，确保：
 
-把两张透明底 PNG 放进你的 assets（本仓库 `wengua-tianji/assets/` 里已有可直接复用的）：
-
-- `compass.png` —— 罗盘/天机盘，建议正方形透明底（可用 `tianji-tray-empty.png`）
-- `coin.png` —— 古铜钱，透明底（可用 `coin-cutout.png`）
-
-## 集成
-
-```tsx
-// App.tsx
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { LuopanRitual } from "./ritual/LuopanRitual";
-
-export default function App() {
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <LuopanRitual
-        compassSource={require("./assets/compass.png")}
-        coinSource={require("./assets/coin.png")}
-        // result 由你的规则引擎 + /api/divine 解读后端在起卦前准备好
-        result={{
-          hexagram: "需 → 节",
-          title: "先稳住节奏，再择机推进",
-          interpretation: "当前更适合蓄力与整理资源，把关键准备做扎实，会比立即冲刺更稳。",
-        }}
-        // onStart={() => 触发真正的起卦/请求解读}
-      />
-    </GestureHandlerRootView>
-  );
-}
-```
+1. `npx expo install react-native-reanimated @shopify/react-native-skia react-native-gesture-handler expo-asset`
+2. `babel.config.js` 的 plugins 最后一项是 `"react-native-reanimated/plugin"`
+3. 根组件用 `GestureHandlerRootView` 包裹（见本项目 `App.tsx`）
+4. 像 `App.tsx` 那样渲染 `<LuopanRitual compassSource coinSource result />`
 
 ## 架构
 
@@ -76,8 +47,21 @@ export default function App() {
 - **Rive 罗盘**：若有带 idle/spin/decel 状态机的 `.riv`，把 `CompassScene` 的 `Animated.Image` 换成 `<Rive>`，用 `useAnimatedReaction` 监听 `spin`/`shake` 去 `setNumber`/`fireState` 驱动状态机。
 - **真模糊渐清**：把结果卡内容渲染进 Skia `<Canvas>` 并加 `<Blur blur={derived}>`，blur 从 ~12 降到 0；见 `ResultReveal.tsx` 注释。
 
-## 已知未验证项（集成时重点测）
+## 验证状态与已修问题
 
-1. Skia 组件直接消费 reanimated `useDerivedValue` 的写法依赖 skia↔reanimated 集成版本，旧版可能要用 `useSharedValueEffect`。
-2. `<Points mode="stroke">` 的点大小/端点在不同 skia 版本表现略有差异。
-3. 三枚铜钱落点 / `landY` 需按你实际罗盘图尺寸与位置微调。
+已通过（本机，真实依赖）：
+
+- ✅ `npx tsc --noEmit` —— 类型干净
+- ✅ `npx expo export --platform ios` —— Metro 打包成功（1080 模块，含资产）
+
+打包过程中实际修掉的问题：
+
+- **Skia `transform` 不接受「数组内嵌 derived value」**：原本写 `transform={[{ translateX: smokeA }]}`（`smokeA` 是 `DerivedValue`）会类型报错；改为整个 transform 作为一个 derived value：`useDerivedValue(() => [{ translateX: ... }])`，传 `transform={smokeATransform}`。这正是 skia↔reanimated 集成最常见的坑。
+- 补了漏掉的 `expo-asset` 依赖（`require('./assets/*.png')` 需要）。
+
+仍需在设备/模拟器上确认（无法靠打包验证）：
+
+1. 运行时观感与节奏（呼吸/旋转/落币/金光/揭晓的时序手感）——`ritual/theme.ts` 的 `RITUAL_TIMING` 可调。
+2. 三枚铜钱落点 / `landY` 需按你实际罗盘图尺寸与位置微调（`CoinDropLayer.tsx` 的 `COIN_SPECS`）。
+3. 低端 Android 帧率：必要时降 `RitualGlow.tsx` 的 `PARTICLE_COUNT`、去掉 `<Blur>`。
+4. `<Points mode="points">` 的点大小/端点在不同 skia 小版本表现可能略有差异。
