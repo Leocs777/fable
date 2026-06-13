@@ -9,9 +9,12 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 const port = Number(process.env.PORT || 4174);
 const host = process.env.HOST || "0.0.0.0";
 
-// 模型可配置，默认 claude-opus-4-8；想省钱可设 FABLE_MODEL=claude-haiku-4-5
-const MODEL = process.env.FABLE_MODEL || "claude-opus-4-8";
+// 解释引擎支持两个 provider，可切换：
+//  - cerebras：OpenAI 兼容，跑 Qwen/Llama/GLM 等开源模型（中文术数解读默认用 qwen-3-32b）
+//  - anthropic：Claude（claude-opus-4-8）
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const CEREBRAS_URL = "https://api.cerebras.ai/v1/chat/completions";
+const DEFAULT_MODELS = { anthropic: "claude-opus-4-8", cerebras: "qwen-3-32b" };
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -20,13 +23,22 @@ const types = {
   ".png": "image/png",
 };
 
-// API key 优先级：环境变量 > config.local.json（gitignored）
-async function resolveApiKey() {
-  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+// 解析 provider + key + model：环境变量优先，其次 config.local.json（gitignored）
+async function resolveConfig() {
+  const model = process.env.FABLE_MODEL || null;
+  if (process.env.CEREBRAS_API_KEY) {
+    return { provider: "cerebras", apiKey: process.env.CEREBRAS_API_KEY, model: model || DEFAULT_MODELS.cerebras };
+  }
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY, model: model || DEFAULT_MODELS.anthropic };
+  }
   try {
     const raw = await readFile(join(root, "config.local.json"), "utf8");
-    const parsed = JSON.parse(raw);
-    return parsed.apiKey || parsed.ANTHROPIC_API_KEY || null;
+    const c = JSON.parse(raw);
+    const apiKey = c.apiKey || c.CEREBRAS_API_KEY || c.ANTHROPIC_API_KEY;
+    if (!apiKey) return null;
+    const provider = c.provider || (c.CEREBRAS_API_KEY ? "cerebras" : "anthropic");
+    return { provider, apiKey, model: c.model || model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.anthropic };
   } catch {
     return null;
   }
@@ -81,9 +93,17 @@ function buildUserMessage(payload) {
   return lines.join("\n");
 }
 
-async function callAnthropic(apiKey, payload) {
+async function httpError(res, label) {
+  const detail = await res.text();
+  const error = new Error(`${label} ${res.status}`);
+  error.status = res.status;
+  error.detail = detail;
+  return error;
+}
+
+async function callAnthropic(config, payload) {
   const body = {
-    model: MODEL,
+    model: config.model,
     max_tokens: 2000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildUserMessage(payload) }],
@@ -93,22 +113,50 @@ async function callAnthropic(apiKey, payload) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-api-key": apiKey,
+      "x-api-key": config.apiKey,
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const detail = await res.text();
-    const error = new Error(`anthropic ${res.status}`);
-    error.status = res.status;
-    error.detail = detail;
-    throw error;
-  }
+  if (!res.ok) throw await httpError(res, "anthropic");
   const data = await res.json();
   const textBlock = (data.content || []).find((b) => b.type === "text");
   if (!textBlock) throw new Error("no text block in response");
   return JSON.parse(textBlock.text);
+}
+
+async function callCerebras(config, payload) {
+  const body = {
+    model: config.model,
+    max_completion_tokens: 2000,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: buildUserMessage(payload) },
+    ],
+    response_format: {
+      type: "json_schema",
+      json_schema: { name: "wengua_interpretation", strict: true, schema: INTERPRET_SCHEMA },
+    },
+  };
+  const res = await fetch(CEREBRAS_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw await httpError(res, "cerebras");
+  const data = await res.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("no content in response");
+  return JSON.parse(content);
+}
+
+function callLLM(config, payload) {
+  return config.provider === "cerebras"
+    ? callCerebras(config, payload)
+    : callAnthropic(config, payload);
 }
 
 function readBody(request) {
@@ -169,17 +217,17 @@ async function handleInterpret(request, response) {
     return;
   }
 
-  const apiKey = await resolveApiKey();
-  if (!apiKey) {
+  const config = await resolveConfig();
+  if (!config) {
     sendJson(response, 503, { error: "no_api_key" });
     return;
   }
 
   try {
-    const result = await callAnthropic(apiKey, payload);
+    const result = await callLLM(config, payload);
     sendJson(response, 200, result);
   } catch (err) {
-    console.error("interpret failed:", err.status || "", err.message, err.detail || "");
+    console.error(`interpret failed (${config.provider}):`, err.status || "", err.message, err.detail || "");
     sendJson(response, 502, { error: "model_failed" });
   }
 }
@@ -219,12 +267,12 @@ server.listen(port, host, async () => {
     .filter((net) => net && net.family === "IPv4" && !net.internal)
     .map((net) => `http://${net.address}:${port}`);
 
-  const hasKey = Boolean(await resolveApiKey());
+  const config = await resolveConfig();
   console.log(`Tianji prototype local http://127.0.0.1:${port}`);
   localUrls.forEach((url) => console.log(`Tianji prototype mobile ${url}`));
   console.log(
-    hasKey
-      ? `AI interpret: enabled (model ${MODEL})`
-      : "AI interpret: DISABLED — no API key. Set ANTHROPIC_API_KEY or create config.local.json. Prototype falls back to sample copy.",
+    config
+      ? `AI interpret: enabled (${config.provider} · ${config.model})`
+      : "AI interpret: DISABLED — no API key. Set CEREBRAS_API_KEY / ANTHROPIC_API_KEY or create config.local.json. Prototype falls back to sample copy.",
   );
 });

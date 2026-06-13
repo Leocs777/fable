@@ -1,4 +1,7 @@
 {
-  "_comment": "复制本文件为 config.local.json（已被 .gitignore 忽略），填入你的 Anthropic API key 后重启 server，即可启用真实 AI 解读。也可改用环境变量 ANTHROPIC_API_KEY。",
-  "apiKey": "sk-ant-..."
+  "_comment": "复制本文件为 config.local.json（已被 .gitignore 忽略），填入 key 后重启 server 即可启用真实 AI 解读。也可改用环境变量 CEREBRAS_API_KEY / ANTHROPIC_API_KEY。",
+  "_provider": "provider 可填 cerebras 或 anthropic；不填则按 key 字段名推断。model 不填则用该 provider 的默认（cerebras: qwen-3-32b，anthropic: claude-opus-4-8）。",
+  "provider": "cerebras",
+  "apiKey": "csk-...",
+  "model": "qwen-3-32b"
 }

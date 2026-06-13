@@ -58,14 +58,15 @@ Fable 把传统术数体验拆成三个可验证模块：
 ```bash
 cd fable/prototypes/wengua-tianji
 
-# 可选：启用真实 AI 解读（二选一）
-export ANTHROPIC_API_KEY=sk-ant-...
-# 或 cp config.local.example.json config.local.json 后填入 key
+# 可选：启用真实 AI 解读。支持两个 provider，任选其一：
+export CEREBRAS_API_KEY=csk-...     # Cerebras（OpenAI 兼容，默认 qwen-3-32b）
+# export ANTHROPIC_API_KEY=sk-ant-... # Claude（默认 claude-opus-4-8）
+# 或 cp config.local.example.json config.local.json 后填 provider/apiKey/model
 
 node server.mjs
 ```
 
-启动时会打印 `AI interpret: enabled/DISABLED`。未配置 key 也能跑，问卦解读会回退到本地示例文案。
+启动时会打印 `AI interpret: enabled (provider · model)` 或 `DISABLED`。未配置 key 也能跑，问卦解读会回退到本地示例文案。模型可用 `FABLE_MODEL` 或 config 里的 `model` 覆盖（如 Cerebras 上换 `llama-3.3-70b`、`gpt-oss-120b`、`zai-glm-4.7`）。
 
 打开：
 
