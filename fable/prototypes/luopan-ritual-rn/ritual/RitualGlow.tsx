@@ -81,14 +81,6 @@ type Props = {
 export function RitualGlow({ glow, clock, width, height, center }: Props) {
   const glowRadius = useMemo(() => Math.min(width, height) * 0.55, [width, height]);
 
-  // 两层柔烟缓慢反向平移
-  const smokeA = useAnimatedStyle(() => ({
-    transform: [{ translateX: clock.value * 40 - 20 }, { translateY: clock.value * 16 }],
-  }));
-  const smokeB = useAnimatedStyle(() => ({
-    transform: [{ translateX: -clock.value * 30 + 15 }, { translateY: -clock.value * 12 }],
-  }));
-
   // 落地金光透明度
   const glowProps = useAnimatedProps(() => ({ opacity: glow.value }));
 
@@ -99,10 +91,6 @@ export function RitualGlow({ glow, clock, width, height, center }: Props) {
         colors={[RITUAL_COLORS.bgTop, RITUAL_COLORS.bgBottom]}
         style={StyleSheet.absoluteFill}
       />
-
-      {/* 柔烟（两层大半透明圆缓动） */}
-      <Animated.View style={[styles.smoke, { left: width * 0.05, top: height * 0.18 }, smokeA]} />
-      <Animated.View style={[styles.smoke, { left: width * 0.42, top: height * 0.46 }, smokeB]} />
 
       {/* 上浮金粒子 */}
       {PARTICLES.map((p, i) => (
@@ -129,13 +117,3 @@ export function RitualGlow({ glow, clock, width, height, center }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  smoke: {
-    position: "absolute",
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: RITUAL_COLORS.smoke,
-  },
-});

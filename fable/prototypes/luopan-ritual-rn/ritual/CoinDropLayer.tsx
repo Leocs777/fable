@@ -41,9 +41,9 @@ function Coin({
   landY: number;
   fallFrom: number;
 }) {
-  const style = useAnimatedStyle(() => {
+  // 铜钱本体：下落 + 平面旋转（rotateZ，不翻面，避免单面 PNG 在侧面消失）+ 落地压扁回弹。
+  const coinStyle = useAnimatedStyle(() => {
     const p = progress.value;
-    // 纵向：从屏幕上方落到盘面；0.82 处略高于落点，弹簧段沉到位
     const translateY = interpolate(
       p,
       [0, 0.82, 1],
@@ -51,31 +51,41 @@ function Coin({
       Extrapolation.CLAMP,
     );
     const translateX = interpolate(p, [0, 1], [spec.startX, spec.landX]);
-    // 空中绕 X 轴翻滚（落地停在 720°=360 倍数 → 正面朝上），配 perspective 出 3D 翻转感
-    const flipX = interpolate(p, [0, 1], [0, spec.spin * 720]);
-    const spinZ = interpolate(p, [0, 1], [0, spec.spin * 160]); // 轻微平面自转
-    // 落地压扁再回弹的体积感
+    const rotateZ = interpolate(p, [0, 1], [0, spec.spin * 400]); // 平面自转约一圈多
     const scale = interpolate(p, [0, 0.82, 0.9, 1], [0.7, 1.06, 0.95, 1], Extrapolation.CLAMP);
     const opacity = interpolate(p, [0, 0.08, 1], [0, 1, 1], Extrapolation.CLAMP);
     return {
       opacity,
+      transform: [{ translateX }, { translateY }, { rotateZ: `${rotateZ}deg` }, { scale }],
+    };
+  });
+
+  // 落地阴影：随铜钱接近地面变大变深 —— 立体感来自“落到盘面”的阴影，而非翻面。
+  const shadowStyle = useAnimatedStyle(() => {
+    const p = progress.value;
+    const opacity = interpolate(p, [0, 0.55, 1], [0, 0.08, 0.3], Extrapolation.CLAMP);
+    const s = interpolate(p, [0, 0.82, 1], [0.2, 0.7, 1], Extrapolation.CLAMP);
+    const translateX = interpolate(p, [0, 1], [spec.startX, spec.landX]);
+    return {
+      opacity,
       transform: [
-        { perspective: 600 },
         { translateX },
-        { translateY },
-        { rotateX: `${flipX}deg` },
-        { rotateZ: `${spinZ}deg` },
-        { scale },
+        { translateY: landY + size * 0.42 },
+        { scaleX: s },
+        { scaleY: s * 0.32 }, // 压扁成椭圆地面阴影
       ],
     };
   });
 
   return (
-    <AnimatedImage
-      source={source}
-      resizeMode="contain"
-      style={[styles.coin, { width: size, height: size }, style]}
-    />
+    <>
+      <Animated.View style={[styles.shadow, { width: size, height: size }, shadowStyle]} />
+      <AnimatedImage
+        source={source}
+        resizeMode="contain"
+        style={[styles.coin, { width: size, height: size }, coinStyle]}
+      />
+    </>
   );
 }
 
@@ -103,5 +113,10 @@ const styles = StyleSheet.create({
   coin: {
     position: "absolute",
     // 容器需用 alignItems/justifyContent: center，使 translate 以盘心为原点
+  },
+  shadow: {
+    position: "absolute",
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
 });
