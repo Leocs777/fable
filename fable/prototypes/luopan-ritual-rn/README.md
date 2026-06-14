@@ -2,7 +2,7 @@
 
 沉浸式起卦仪式：暗夜柔烟中，铜罗盘呼吸 → 加速旋转 → 减速，三枚铜钱自上方错落落下、旋转、弹跳落定，落地瞬间罗盘轻震并迸出放射金光，随后结果卡柔和浮现。调性为暗铜 / 古金 / 玉绿 / 柔烟，克制、仪式感、非游戏化。
 
-> ✅ **这是一个可直接运行的 Expo 项目**（不只是代码片段）。已在本机用真实依赖做过静态验证：`tsc --noEmit` 类型检查通过、`expo export`（Metro 打包，1080 模块）成功。**运行时画面仍需在你的设备/模拟器上看**——这台机器没有模拟器，我无法替你截图确认观感。
+> ✅ **可直接运行的 Expo 项目。`App.tsx` 现在默认渲染真 3D 场景**（`ritual3d/Ritual3D.tsx`，three.js + expo-gl 命令式，**Expo Go 可跑，无需 dev build**）；旧的 2.5D 版保留在 `ritual/`（需对比时把 `App.tsx` 换回 `LuopanRitual`）。已在本机静态验证：`tsc --noEmit` 通过、`expo export`（Metro 打包，1109 模块，含 three）成功。**运行时画面需在你的设备/模拟器上看**——这台机器没有模拟器，我无法替你截图确认观感。
 >
 > 实测依赖版本（**Expo SDK 54**，匹配当前 Expo Go）：**expo 54 · react 19 · react-native 0.81 · react-native-reanimated 4.1（+ react-native-worklets）· react-native-gesture-handler 2.28 · expo-linear-gradient · react-native-svg · expo-asset**。版本都钉在 `package.json` 里。
 >
