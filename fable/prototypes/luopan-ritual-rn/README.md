@@ -4,7 +4,7 @@
 
 > ✅ **这是一个可直接运行的 Expo 项目**（不只是代码片段）。已在本机用真实依赖做过静态验证：`tsc --noEmit` 类型检查通过、`expo export`（Metro 打包，1080 模块）成功。**运行时画面仍需在你的设备/模拟器上看**——这台机器没有模拟器，我无法替你截图确认观感。
 >
-> 实测依赖版本：**expo 52 · react-native 0.76 · react-native-reanimated 3.16 · @shopify/react-native-skia 1.5 · react-native-gesture-handler 2.20 · expo-asset**。版本都钉在 `package.json` 里。
+> 实测依赖版本（**Expo SDK 54**，匹配当前 Expo Go）：**expo 54 · react 19 · react-native 0.81 · react-native-reanimated 4.1（+ react-native-worklets）· @shopify/react-native-skia 2.2 · react-native-gesture-handler 2.28 · expo-asset**。版本都钉在 `package.json` 里。
 
 ## 运行
 
@@ -20,8 +20,8 @@ npx expo start        # 用 Expo Go 扫码，或按 i / a 开 iOS / Android 模�
 
 如果你已有 App，把 `ritual/` 目录和两张资产拷过去，确保：
 
-1. `npx expo install react-native-reanimated @shopify/react-native-skia react-native-gesture-handler expo-asset`
-2. `babel.config.js` 的 plugins 最后一项是 `"react-native-reanimated/plugin"`
+1. `npx expo install react-native-reanimated react-native-worklets @shopify/react-native-skia react-native-gesture-handler expo-asset`
+2. `babel.config.js` 的 plugins 最后一项是 `"react-native-worklets/plugin"`（reanimated 4 起 worklets 独立成包，插件改名；旧版是 `react-native-reanimated/plugin`）
 3. 根组件用 `GestureHandlerRootView` 包裹（见本项目 `App.tsx`）
 4. 像 `App.tsx` 那样渲染 `<LuopanRitual compassSource coinSource result />`
 
@@ -51,11 +51,12 @@ npx expo start        # 用 Expo Go 扫码，或按 i / a 开 iOS / Android 模�
 
 已通过（本机，真实依赖）：
 
-- ✅ `npx tsc --noEmit` —— 类型干净
-- ✅ `npx expo export --platform ios` —— Metro 打包成功（1080 模块，含资产）
+- ✅ `npx tsc --noEmit` —— 类型干净（Expo SDK 54）
+- ✅ `npx expo export --platform ios` —— Metro 打包成功（1237 模块，含资产）
 
-打包过程中实际修掉的问题：
+实际修掉的问题：
 
+- **升 Expo SDK 54 = reanimated 4**：reanimated 4 把 worklets 拆成独立包 `react-native-worklets`，babel 插件从 `react-native-reanimated/plugin` 改成 `react-native-worklets/plugin`。已加 worklets 依赖并改 babel。基础 API（`useSharedValue`/`withTiming`/`useAnimatedStyle`/`useDerivedValue`）在 v4 不变，业务代码无需改。
 - **Skia `transform` 不接受「数组内嵌 derived value」**：原本写 `transform={[{ translateX: smokeA }]}`（`smokeA` 是 `DerivedValue`）会类型报错；改为整个 transform 作为一个 derived value：`useDerivedValue(() => [{ translateX: ... }])`，传 `transform={smokeATransform}`。这正是 skia↔reanimated 集成最常见的坑。
 - 补了漏掉的 `expo-asset` 依赖（`require('./assets/*.png')` 需要）。
 
