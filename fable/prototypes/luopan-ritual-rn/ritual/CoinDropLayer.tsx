@@ -44,15 +44,17 @@ function Coin({
   // 铜钱本体：下落 + 平面旋转（rotateZ，不翻面，避免单面 PNG 在侧面消失）+ 落地压扁回弹。
   const coinStyle = useAnimatedStyle(() => {
     const p = progress.value;
+    // 下落 + 两段递减回弹：0.68 砸地 → 0.8 弹起 → 0.89 落 → 0.95 小弹 → 1 定
     const translateY = interpolate(
       p,
-      [0, 0.82, 1],
-      [-fallFrom, landY - spec.settleDip, landY],
+      [0, 0.68, 0.8, 0.89, 0.95, 1],
+      [-fallFrom, landY, landY - spec.settleDip, landY, landY - spec.settleDip * 0.4, landY],
       Extrapolation.CLAMP,
     );
     const translateX = interpolate(p, [0, 1], [spec.startX, spec.landX]);
     const rotateZ = interpolate(p, [0, 1], [0, spec.spin * 400]); // 平面自转约一圈多
-    const scale = interpolate(p, [0, 0.82, 0.9, 1], [0.7, 1.06, 0.95, 1], Extrapolation.CLAMP);
+    // 砸地瞬间微胀（压扁观感），回弹时收一点
+    const scale = interpolate(p, [0, 0.62, 0.68, 0.8, 1], [0.7, 1.0, 1.08, 0.96, 1], Extrapolation.CLAMP);
     const opacity = interpolate(p, [0, 0.08, 1], [0, 1, 1], Extrapolation.CLAMP);
     return {
       opacity,
@@ -63,8 +65,8 @@ function Coin({
   // 落地阴影：随铜钱接近地面变大变深 —— 立体感来自“落到盘面”的阴影，而非翻面。
   const shadowStyle = useAnimatedStyle(() => {
     const p = progress.value;
-    const opacity = interpolate(p, [0, 0.55, 1], [0, 0.08, 0.3], Extrapolation.CLAMP);
-    const s = interpolate(p, [0, 0.82, 1], [0.2, 0.7, 1], Extrapolation.CLAMP);
+    const opacity = interpolate(p, [0, 0.5, 0.68, 1], [0, 0.12, 0.3, 0.3], Extrapolation.CLAMP);
+    const s = interpolate(p, [0, 0.68, 1], [0.2, 1, 1], Extrapolation.CLAMP); // 0.68 落地时阴影最大
     const translateX = interpolate(p, [0, 1], [spec.startX, spec.landX]);
     return {
       opacity,

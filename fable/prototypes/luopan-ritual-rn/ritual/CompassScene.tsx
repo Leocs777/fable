@@ -18,11 +18,11 @@ type Props = {
 };
 
 export function CompassScene({ spin, breathing, shake, source, size }: Props) {
+  // 注意：不要给罗盘加 rotateX 倾斜。它会把盘的下半在伪 3D 里推到铜钱前面，
+  // 遮住铜钱下半（"嵌进罗盘看不见下半"）。真正的 3D 倾斜请走 R3F 版（见 README）。
   const style = useAnimatedStyle(() => ({
     transform: [
-      { perspective: 900 }, // 2.5D：透视
-      { rotateX: "18deg" }, // 盘面后仰，呈桌上俯视的立体感
-      { translateX: shake.value * 7 }, // 落地横向震颤（加大）
+      { translateX: shake.value * 7 }, // 落地横向震颤
       { rotate: `${spin.value}deg` }, // 绕盘心旋转
       { scale: 1 + breathing.value * 0.025 }, // 呼吸
     ],

@@ -6,7 +6,9 @@
 >
 > 实测依赖版本（**Expo SDK 54**，匹配当前 Expo Go）：**expo 54 · react 19 · react-native 0.81 · react-native-reanimated 4.1（+ react-native-worklets）· react-native-gesture-handler 2.28 · expo-linear-gradient · react-native-svg · expo-asset**。版本都钉在 `package.json` 里。
 >
-> **氛围层（暗底/柔烟/金粒子/落地金光）用 `expo-linear-gradient` + `react-native-svg` + reanimated**，在 Expo Go 里直接可见。`@shopify/react-native-skia` 的高保真版（真模糊/更细腻）需要 development build（Expo Go 不含 Skia 原生模块），见 git 历史。
+> **氛围层（暗底/金粒子/落地金光）用 `expo-linear-gradient` + `react-native-svg` + reanimated**，在 Expo Go 里直接可见。
+>
+> ⚠️ **这是 2.5D（transform）版，质感有天花板**——给不了真厚度/真翻转/真回弹，且伪 3D 会有遮挡问题。要做"高级冥想 App + 3D 占卜"那种质感，正路是真 3D（React Three Fiber + expo-gl，**也能在 Expo Go 跑**）：完整方案见 **[REAL-3D-PLAN.md](./REAL-3D-PLAN.md)**。
 
 ## 运行
 
