@@ -20,27 +20,37 @@ type Props = {
 export function CompassScene({ spin, breathing, shake, source, size }: Props) {
   const style = useAnimatedStyle(() => ({
     transform: [
-      { translateX: shake.value * 4 }, // 落地横向轻颤
-      { rotate: `${spin.value}deg` },
-      { scale: 1 + breathing.value * 0.02 }, // 呼吸：±2%
+      { perspective: 900 }, // 2.5D：透视
+      { rotateX: "18deg" }, // 盘面后仰，呈桌上俯视的立体感
+      { translateX: shake.value * 7 }, // 落地横向震颤（加大）
+      { rotate: `${spin.value}deg` }, // 绕盘心旋转
+      { scale: 1 + breathing.value * 0.025 }, // 呼吸
     ],
   }));
 
   return (
     <AnimatedImage
       source={source}
-      resizeMode="contain"
-      style={[{ width: size, height: size }, styles.shadow, style]}
+      resizeMode="cover"
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2, // 裁成圆：去掉方形纸背景，旋转时不再带框
+        },
+        styles.shadow,
+        style,
+      ]}
     />
   );
 }
 
 const styles = StyleSheet.create({
   shadow: {
-    // 给铜盘一点沉底阴影，强化质感
+    // 给铜盘一点沉底阴影，强化“悬浮在暗处”的质感
     shadowColor: "#000",
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.55,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 18 },
   },
 });

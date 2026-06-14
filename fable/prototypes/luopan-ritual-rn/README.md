@@ -4,7 +4,9 @@
 
 > ✅ **这是一个可直接运行的 Expo 项目**（不只是代码片段）。已在本机用真实依赖做过静态验证：`tsc --noEmit` 类型检查通过、`expo export`（Metro 打包，1080 模块）成功。**运行时画面仍需在你的设备/模拟器上看**——这台机器没有模拟器，我无法替你截图确认观感。
 >
-> 实测依赖版本（**Expo SDK 54**，匹配当前 Expo Go）：**expo 54 · react 19 · react-native 0.81 · react-native-reanimated 4.1（+ react-native-worklets）· @shopify/react-native-skia 2.2 · react-native-gesture-handler 2.28 · expo-asset**。版本都钉在 `package.json` 里。
+> 实测依赖版本（**Expo SDK 54**，匹配当前 Expo Go）：**expo 54 · react 19 · react-native 0.81 · react-native-reanimated 4.1（+ react-native-worklets）· react-native-gesture-handler 2.28 · expo-linear-gradient · react-native-svg · expo-asset**。版本都钉在 `package.json` 里。
+>
+> **氛围层（暗底/柔烟/金粒子/落地金光）用 `expo-linear-gradient` + `react-native-svg` + reanimated**，在 Expo Go 里直接可见。`@shopify/react-native-skia` 的高保真版（真模糊/更细腻）需要 development build（Expo Go 不含 Skia 原生模块），见 git 历史。
 
 ## 运行
 
@@ -56,8 +58,10 @@ npx expo start        # 用 Expo Go 扫码，或按 i / a 开 iOS / Android 模�
 
 实际修掉的问题：
 
-- **升 Expo SDK 54 = reanimated 4**：reanimated 4 把 worklets 拆成独立包 `react-native-worklets`，babel 插件从 `react-native-reanimated/plugin` 改成 `react-native-worklets/plugin`。已加 worklets 依赖并改 babel。基础 API（`useSharedValue`/`withTiming`/`useAnimatedStyle`/`useDerivedValue`）在 v4 不变，业务代码无需改。
-- **Skia `transform` 不接受「数组内嵌 derived value」**：原本写 `transform={[{ translateX: smokeA }]}`（`smokeA` 是 `DerivedValue`）会类型报错；改为整个 transform 作为一个 derived value：`useDerivedValue(() => [{ translateX: ... }])`，传 `transform={smokeATransform}`。这正是 skia↔reanimated 集成最常见的坑。
+- **Skia 在 Expo Go 不可用 → 氛围层重写**：`@shopify/react-native-skia` 需要 development build，Expo Go 跑不了它，导致暗底/烟雾/粒子/金光整层不显示（罗盘的方形纸背景也因此露出还跟着转）。已把氛围层换成 `expo-linear-gradient` + `react-native-svg` + reanimated，Expo Go 直接可见。
+- **罗盘 2.5D + 裁圆**：加 `perspective` + `rotateX` 透视后仰；`borderRadius` 裁圆去掉方形纸背景（之前整张方图连背景一起转）。
+- **铜钱 3D 翻滚**：从平面旋转改为 `perspective` + `rotateX` 空中翻滚，落地停在 360° 倍数正面朝上。
+- **Expo SDK 54 = reanimated 4**：worklets 拆为独立包 `react-native-worklets`，babel 插件改 `react-native-worklets/plugin`。基础 API 在 v4 不变，动画业务代码无需改。
 - 补了漏掉的 `expo-asset` 依赖（`require('./assets/*.png')` 需要）。
 
 仍需在设备/模拟器上确认（无法靠打包验证）：

@@ -51,13 +51,22 @@ function Coin({
       Extrapolation.CLAMP,
     );
     const translateX = interpolate(p, [0, 1], [spec.startX, spec.landX]);
-    const rotate = interpolate(p, [0, 1], [0, spec.spin * 540]);
+    // 空中绕 X 轴翻滚（落地停在 720°=360 倍数 → 正面朝上），配 perspective 出 3D 翻转感
+    const flipX = interpolate(p, [0, 1], [0, spec.spin * 720]);
+    const spinZ = interpolate(p, [0, 1], [0, spec.spin * 160]); // 轻微平面自转
     // 落地压扁再回弹的体积感
-    const scale = interpolate(p, [0, 0.82, 0.9, 1], [0.7, 1.05, 0.96, 1], Extrapolation.CLAMP);
+    const scale = interpolate(p, [0, 0.82, 0.9, 1], [0.7, 1.06, 0.95, 1], Extrapolation.CLAMP);
     const opacity = interpolate(p, [0, 0.08, 1], [0, 1, 1], Extrapolation.CLAMP);
     return {
       opacity,
-      transform: [{ translateX }, { translateY }, { rotate: `${rotate}deg` }, { scale }],
+      transform: [
+        { perspective: 600 },
+        { translateX },
+        { translateY },
+        { rotateX: `${flipX}deg` },
+        { rotateZ: `${spinZ}deg` },
+        { scale },
+      ],
     };
   });
 
