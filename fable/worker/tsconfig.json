@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["es2022"],
+    "types": ["@cloudflare/workers-types"],
+    "strict": true,
+    // 规则模块（hexagrams/divination）从已验证的原型 .mjs 复制，保留其余严格检查、
+    // 只放宽隐式 any（否则要给查表对象逐个加索引签名，收益不大）
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*.ts"]
+}

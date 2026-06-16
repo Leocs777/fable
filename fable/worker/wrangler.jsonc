@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fable-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "observability": { "enabled": true }
+  // Cerebras key 用 secret 注入，不写进这里：
+  //   npx wrangler secret put CEREBRAS_API_KEY
+  // 可选覆盖模型：在 Cloudflare 面板设 var FABLE_MODEL，或 wrangler.jsonc 加 "vars": { "FABLE_MODEL": "..." }
+}
