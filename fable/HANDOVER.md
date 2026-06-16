@@ -118,5 +118,5 @@ Cloudflare Worker，移植自原型 `server.mjs`。
 
 ## 9. git / 发布
 
-- 远程：`origin = https://github.com/Leocs777/fable.git`。本机 `gh` 可能未登录；push 需要用户的 GitHub 凭证。之前的提交都在本地，按需 push。
+- 远程：`origin = https://github.com/Leocs777/fable.git`。**所有工作已 push 到 `origin/main`**（接手的 agent 直接 `git clone` 即可拿到全部）。后续提交记得 push。
 - 提交习惯：信息结尾 `Co-Authored-By: Claude ...`。secret 文件（config.local.json / .dev.vars）已 gitignored，**提交前确认没 staged 任何 key**。
