@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "stateMachine": "DivinationMotion",
+  "states": [
+    "idle",
+    "pressed",
+    "entering",
+    "generating_start",
+    "generating_loop",
+    "generating_complete",
+    "result_header",
+    "error",
+    "retry"
+  ],
+  "inputs": {
+    "booleans": ["is_loading", "has_result", "has_error"],
+    "numbers": ["progress"],
+    "triggers": {
+      "meihua": [
+        "meihua_idle",
+        "meihua_pressed",
+        "meihua_entering",
+        "meihua_generating_start",
+        "meihua_generating_loop",
+        "meihua_generating_complete",
+        "meihua_result_header",
+        "meihua_error",
+        "meihua_retry"
+      ],
+      "qimen": [
+        "qimen_idle",
+        "qimen_pressed",
+        "qimen_entering",
+        "qimen_generating_start",
+        "qimen_generating_loop",
+        "qimen_generating_complete",
+        "qimen_result_header",
+        "qimen_error",
+        "qimen_retry"
+      ],
+      "liuren": [
+        "liuren_idle",
+        "liuren_pressed",
+        "liuren_entering",
+        "liuren_generating_start",
+        "liuren_generating_loop",
+        "liuren_generating_complete",
+        "liuren_result_header",
+        "liuren_error",
+        "liuren_retry"
+      ]
+    }
+  },
+  "timing": {
+    "minimumGeneratingMs": 1500,
+    "completionAnimationMs": 900,
+    "idleLoopMs": {
+      "meihua": 2800,
+      "qimen": 3200,
+      "liuren": 3600
+    },
+    "entryTransitionMs": {
+      "meihua": 700,
+      "qimen": 800,
+      "liuren": 850
+    }
+  },
+  "assetTargets": {
+    "rive": [
+      "meihua.riv",
+      "qimen.riv",
+      "liuren.riv"
+    ],
+    "figma": "Fable Divination Motion Source",
+    "preview": [
+      "meihua_motion_preview.mp4",
+      "qimen_motion_preview.mp4",
+      "liuren_motion_preview.mp4"
+    ]
+  }
+}
